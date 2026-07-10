@@ -39,7 +39,7 @@
 | `components/ExportButton.tsx` | ✅ Done | PDF download trigger (lazy-loaded) |
 | `app/page.tsx` | ✅ Done | Full wired UI, streaming reveal, error states |
 | TypeScript build | ✅ Passing | `next build` — 0 errors, 0 warnings |
-| End-to-end API test | ⬜ Pending | Need real API keys in .env.local |
+| End-to-end API test | ✅ Working | Full pipeline tested — story → characters → world → art prompts → images → PDF |
 | UI polish pass | ⬜ Not started | |
 | Vercel deployment | ⬜ Not started | |
 | Demo rehearsal | ⬜ Not started | |
@@ -97,7 +97,7 @@ In TypeScript: fetch image bytes from Flux 2 Pro URL → `Buffer.from(bytes).toS
 
 ## 🔄 In Progress
 
-⬜ Fill in real API keys in `storyforge-ai/.env.local` and run `npm run dev` to test end-to-end.
+⬜ UI polish pass — loading skeletons, error states, typography check
 
 ---
 
@@ -141,13 +141,12 @@ In TypeScript: fetch image bytes from Flux 2 Pro URL → `Buffer.from(bytes).toS
 
 ### Phase 2 — API Key Test + Polish (Days 5–11)
 
-- [ ] **Next step** — Fill API keys → `npm run dev` → test full pipeline end-to-end
-  - [ ] Add `WATSONX_API_KEY`, `WATSONX_PROJECT_ID`, `REPLICATE_API_TOKEN` to `.env.local`
-  - [ ] Set `DEV_IMAGE_MODEL=schnell` for cheap dev iterations
-  - [ ] Test: story generation (check JSON output)
-  - [ ] Test: image generation (check base64 data URIs return correctly)
-  - [ ] Test: PDF export (check images embed, PDF downloads)
-  - Bob tokens target: **5–8** (use Bob for any Granite response debugging)
+- [x] **End-to-end pipeline test** — ✅ Working as expected
+  - [x] `WATSONX_API_KEY`, `WATSONX_PROJECT_ID`, `REPLICATE_API_TOKEN` confirmed in `.env.local`
+  - [x] Story generation → JSON output ✅
+  - [x] Image generation (Flux 2 Pro + Flux Kontext Pro) ✅
+  - [x] PDF export ✅
+  - Bob tokens used: **0** _(all fixes done manually/diagnostically)_
 
 ### Phase 3 — PDF + Integration (Days 9–10)
 
