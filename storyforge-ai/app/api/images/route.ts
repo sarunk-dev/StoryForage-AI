@@ -14,12 +14,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Generate all 4 images in parallel — Pollinations handles concurrent requests fine
+    // Stagger requests by 1.5 s each to avoid Pollinations 429 rate limit.
+    // With retry back-off this still completes in ~15–25 s total.
     const [image1, image2, image3, image4] = await Promise.all([
       flux2pro(imagePrompts[0]),
-      fluxKontext(imagePrompts[1], ""),
-      fluxKontext(imagePrompts[2], ""),
-      fluxKontext(imagePrompts[3], ""),
+      fluxKontext(imagePrompts[1], "", 1500),
+      fluxKontext(imagePrompts[2], "", 3000),
+      fluxKontext(imagePrompts[3], "", 4500),
     ]);
 
     return NextResponse.json({ imageUrls: [image1, image2, image3, image4] });
