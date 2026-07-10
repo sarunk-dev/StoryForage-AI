@@ -19,22 +19,47 @@
 | Area | Status | Notes |
 |---|---|---|
 | PRD & architecture | ✅ Done | v1.1 finalized |
+| Skills installed | ✅ Done | vercel-react-best-practices, shadcn, deployment-pipeline-design |
 | Replicate API (Flux 2 Pro) | ✅ Tested & working | `MytestedFiles/flux_2_pro_test.py` |
 | Replicate API (Flux Kontext Pro) | ✅ Tested & working | `MytestedFiles/flux_kontext_test.py` |
-| IBM Granite integration | ⬜ Not started | |
-| Next.js project scaffold | ⬜ Not started | |
-| Frontend components | ⬜ Not started | |
-| PDF export | ⬜ Not started | |
-| End-to-end pipeline | ⬜ Not started | |
+| Next.js project scaffold | ✅ Done | `storyforge-ai/`, shadcn/ui, Tailwind, all deps |
+| `lib/types.ts` | ✅ Done | All TypeScript interfaces + step types |
+| `lib/prompts.ts` | ✅ Done | 4 prompt templates with JSON schemas |
+| `lib/granite.ts` | ✅ Done | WatsonXAI client, generateJSON with retry, parseJSON |
+| `lib/replicate.ts` | ✅ Done | flux2pro() + fluxKontext() with base64 output |
+| `lib/pdfExport.ts` | ✅ Done | Full styled A4 jsPDF export with images |
+| `app/api/generate/route.ts` | ✅ Done | Sequential 4-step Granite chain |
+| `app/api/images/route.ts` | ✅ Done | Flux 2 Pro → Flux Kontext Pro pipeline |
+| `components/PromptInput.tsx` | ✅ Done | Textarea + genre selector + submit |
+| `components/LoadingPipeline.tsx` | ✅ Done | 5-step animated progress indicator |
+| `components/StorySection.tsx` | ✅ Done | Story outline display |
+| `components/CharacterCard.tsx` | ✅ Done | Character cards + CharactersSection |
+| `components/WorldSection.tsx` | ✅ Done | World-building display |
+| `components/ArtGrid.tsx` | ✅ Done | 2×2 image grid with loading skeletons |
+| `components/ExportButton.tsx` | ✅ Done | PDF download trigger (lazy-loaded) |
+| `app/page.tsx` | ✅ Done | Full wired UI, streaming reveal, error states |
+| TypeScript build | ✅ Passing | `next build` — 0 errors, 0 warnings |
+| End-to-end API test | ⬜ Pending | Need real API keys in .env.local |
+| UI polish pass | ⬜ Not started | |
 | Vercel deployment | ⬜ Not started | |
 | Demo rehearsal | ⬜ Not started | |
 | Submission page | ⬜ Not started | |
 
-**Bob tokens used:** 0 / 60 _(pre-build planning phase, no code tasks started yet)_
+**Bob tokens used:** ~0 / 60 _(scaffold completed without Bob — all tokens preserved for Granite debugging + polish)_
 
 ---
 
 ## ✅ Completed Work
+
+### Skills Installed (Pre Day 1)
+
+| Skill | Installs | Purpose |
+|---|---|---|
+| `vercel-labs/agent-skills@vercel-react-best-practices` | 540K | React/Next.js best practices guidance |
+| `shadcn/ui@shadcn` | 228K | shadcn/ui component patterns |
+| `wshobson/agents@deployment-pipeline-design` | 10K | Vercel deployment patterns |
+
+---
 
 ### Pre-Build Planning (Pre Day 1)
 
@@ -72,93 +97,66 @@ In TypeScript: fetch image bytes from Flux 2 Pro URL → `Buffer.from(bytes).toS
 
 ## 🔄 In Progress
 
-_Nothing currently in active development — sprint not yet started._
+⬜ Fill in real API keys in `storyforge-ai/.env.local` and run `npm run dev` to test end-to-end.
 
 ---
 
 ## 📋 Build Task Checklist
 
-Track Bob sessions and completion here. Check off as you go.
+### Phase 1 — Foundation (Days 1–4) ✅ COMPLETE
 
-### Phase 1 — Foundation (Days 1–4)
+- [x] **Day 1 · Scaffold** — Next.js + shadcn/ui + all dependencies installed
+  - [x] `npx create-next-app storyforge-ai --typescript --tailwind --app`
+  - [x] `npx shadcn@latest init` + components: button, textarea, select, badge, card, separator, progress
+  - [x] `npm install zod replicate @ibm-cloud/watsonx-ai html2canvas jspdf`
+  - [x] Folder structure (`components/`, `lib/`, `app/api/`)
+  - [x] `lib/types.ts` — all TypeScript interfaces
+  - [x] `.env.local` — template with all required keys
+  - [x] First git commit
+  - Bob tokens used: **0** _(done manually)_
 
-- [ ] **Day 1 · Bob Task 1** — Next.js scaffold
-  - [ ] `npx create-next-app storyforge-ai --typescript --tailwind --app`
-  - [ ] Install shadcn/ui: `npx shadcn@latest init`
-  - [ ] Create folder structure (`components/`, `lib/`, `app/api/`)
-  - [ ] Write `lib/types.ts` — all TypeScript interfaces (`StoryOutline`, `Character`, `WorldBuilding`, `PitchDeck`)
-  - [ ] Create `.env.local` with `WATSONX_API_KEY`, `WATSONX_PROJECT_ID`, `REPLICATE_API_TOKEN` placeholders
-  - [ ] First `git commit` — clean baseline
-  - Bob tokens used this session: ___
+- [x] **Day 2–3 · Granite** — client + prompts + API route
+  - [x] `lib/granite.ts` — WatsonXAI client (named export fix), IamAuthenticator, generateJSON with retry
+  - [x] `lib/prompts.ts` — 4 prompt templates with embedded JSON schemas
+  - [x] `app/api/generate/route.ts` — sequential chain, typed response
+  - Bob tokens used: **0** _(done manually)_
 
-- [ ] **Day 2 · Bob Task 2** — Granite client + prompts
-  - [ ] `lib/granite.ts` — watsonx.ai SDK client, typed `generateText(prompt, systemPrompt)` helper
-  - [ ] `lib/prompts.ts` — all 4 prompt templates with JSON schema embedded:
-    - [ ] `storyPrompt(userInput, genre)`
-    - [ ] `characterPrompt(story)`
-    - [ ] `worldPrompt(story, characters)`
-    - [ ] `artPromptPrompt(story, characters, world)`
-  - [ ] Manual test: call each prompt with `curl` or a small `test-granite.ts` script — confirm JSON output
-  - Bob tokens used this session: ___
+- [x] **Day 4 · Replicate** — image pipeline
+  - [x] `lib/replicate.ts` — flux2pro() + fluxKontext(), URL→base64 helper, DEV_IMAGE_MODEL swap
+  - [x] `app/api/images/route.ts` — Flux 2 Pro → Flux Kontext Pro pipeline
+  - Bob tokens used: **0** _(done manually)_
 
-- [ ] **Day 3 · Bob Task 3** — Generate API route
-  - [ ] `app/api/generate/route.ts` — POST handler
-  - [ ] Sequential chain: story → characters → world → art prompts
-  - [ ] `zod` schema validation on each Granite response
-  - [ ] JSON parse + retry logic (1 retry on parse failure)
-  - [ ] Typed response shape matching `PitchDeck` (minus `imageUrls`)
-  - Bob tokens used this session: ___
+- [x] **UI — all components** — built and wired
+  - [x] `components/PromptInput.tsx`
+  - [x] `components/LoadingPipeline.tsx`
+  - [x] `components/StorySection.tsx`
+  - [x] `components/CharacterCard.tsx` + `CharactersSection`
+  - [x] `components/WorldSection.tsx`
+  - [x] `components/ArtGrid.tsx`
+  - [x] `components/ExportButton.tsx`
+  - [x] `app/page.tsx` — full wired UI
+  - Bob tokens used: **0** _(done manually)_
 
-- [ ] **Day 4 · Bob Task 4** — Replicate integration
-  - [ ] Install `replicate` npm package
-  - [ ] `lib/replicate.ts`:
-    - [ ] `flux2pro(prompt: string): Promise<string>` → returns base64 data URI
-    - [ ] `fluxKontext(prompt: string, referenceImageBase64: string): Promise<string>` → returns base64 data URI
-    - [ ] Helper: convert Replicate URL response → base64 data URI (port from `flux_kontext_test.py`)
-  - [ ] `app/api/images/route.ts` — POST handler, receives 4 art prompts, returns 4 base64 image URIs
-  - [ ] Manual test with a known prompt — confirm images return as base64
-  - Bob tokens used this session: ___
+- [x] **Build validation** — `npm run build` PASSING, 0 TypeScript errors
 
-### Phase 2 — UI Build (Days 5–8)
+### Phase 2 — API Key Test + Polish (Days 5–11)
 
-- [ ] **Days 5–6 · Bob Task 5** — Core UI Part 1
-  - [ ] `components/PromptInput.tsx` — text area + genre selector + generate button
-  - [ ] `components/LoadingPipeline.tsx` — 5-step progress indicator (Story → Characters → World → Art Prompts → Images)
-  - [ ] `components/StorySection.tsx` — renders `StoryOutline` (title, logline, premise, acts, theme, tone)
-  - [ ] Test each component with hardcoded mock data — no API calls yet
-  - Bob tokens used these sessions: ___
-
-- [ ] **Days 7–8 · Bob Task 6** — Core UI Part 2
-  - [ ] `components/CharacterCard.tsx` — renders single `Character`
-  - [ ] `components/WorldSection.tsx` — renders `WorldBuilding`
-  - [ ] `components/ArtGrid.tsx` — 2×2 image grid with loading skeleton
-  - [ ] `app/page.tsx` — assemble full layout, wire state management (useState/useReducer)
-  - Bob tokens used these sessions: ___
+- [ ] **Next step** — Fill API keys → `npm run dev` → test full pipeline end-to-end
+  - [ ] Add `WATSONX_API_KEY`, `WATSONX_PROJECT_ID`, `REPLICATE_API_TOKEN` to `.env.local`
+  - [ ] Set `DEV_IMAGE_MODEL=schnell` for cheap dev iterations
+  - [ ] Test: story generation (check JSON output)
+  - [ ] Test: image generation (check base64 data URIs return correctly)
+  - [ ] Test: PDF export (check images embed, PDF downloads)
+  - Bob tokens target: **5–8** (use Bob for any Granite response debugging)
 
 ### Phase 3 — PDF + Integration (Days 9–10)
 
-- [ ] **Day 9 · Bob Task 7** — PDF export
-  - [ ] Install `html2canvas`, `jspdf`
-  - [ ] `lib/pdfExport.ts` — styled PDF generation (cover page, story, characters, world, image grid)
-  - [ ] `components/ExportButton.tsx` — triggers PDF download
-  - [ ] Confirm images render correctly in PDF (all images should already be base64 — no CORS)
-  - Bob tokens used this session: ___
-
-- [ ] **Day 10 · Bob Task 8** — End-to-end integration
-  - [ ] Wire `PromptInput` → `/api/generate` → `/api/images` → full `PitchDeck` state
-  - [ ] Update `LoadingPipeline` to reflect real async steps
-  - [ ] Test 3 different prompts end-to-end (different genres)
-  - [ ] Fix any JSON schema mismatches or image pipeline issues
-  - Bob tokens used this session: ___
-
-### Phase 4 — Polish + Ship (Days 11–14)
-
-- [ ] **Day 11 · Bob Task 9** — UI polish
-  - [ ] Loading skeletons for each section
-  - [ ] Error states (API failure messages, retry buttons)
-  - [ ] Empty state (before first generation)
-  - [ ] Typography, spacing, color consistency
-  - Bob tokens used this session: ___
+- [ ] **UI polish pass**
+  - [ ] Verify loading skeletons render during image generation
+  - [ ] Verify error state shows correct message
+  - [ ] Check typography + spacing on all sections
+  - [ ] Test ⌘+Enter keyboard shortcut
+  - Bob tokens target: **3–5**
 
 - [ ] **Day 12** (Manual) — Deployment
   - [ ] `vercel deploy` from project root
