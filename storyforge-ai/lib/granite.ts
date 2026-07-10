@@ -37,7 +37,7 @@ export async function generateText(
   const projectId = process.env.WATSONX_PROJECT_ID!;
 
   const response = await watsonx.generateText({
-    modelId: "ibm/granite-3-3-8b-instruct",
+    modelId: "ibm/granite-4-h-small",
     projectId,
     input: userPrompt,
     parameters: {
