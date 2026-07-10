@@ -1,0 +1,127 @@
+1. July Challenge - Reimagine Creative Industries with AI
+
+AI is transforming how people create content, tell stories, design experiences, and bring ideas to life. Build solutions that help creators work smarter, explore new forms of expression, and unlock new creative possibilities.
+
+Here, you'll find everything you need to get started, including challenge details, tools, resources, judging criteria, and more.
+
+Get Started
+
+Follow these steps to begin your July Challenge journey:
+
+1. Join the Discord Community – Connect with participants, find teammates, get support from IBM mentors, and follow #july-challenge-and-learning for challenge updates and announcements. Join Discord →
+
+2. Choose Your Challenge & Review All Details – Choose either the July Challenge or the Wildcard Challenge. Each team may submit one project per month to one of the two challenge options. Review the challenge details, submission requirements, judging criteria, prizes, and timeline below. See the July Challenge section below or click here to explore the Wildcard Challenge.
+
+3. Complete the Required IBM SkillsBuild Learning Activity  – Every team member must complete one IBM Bob learning activity before submitting. See the Resources section below for recommended learning activities. Complete IBM SkillsBuild Learning →
+
+4. Get Hands-On with the GitHub Learning Lab – Gain hands-on experience with IBM Bob before building your project. See the GitHub Learning Lab section below for details.
+
+5. Build with IBM Bob & Submit Your Project – Build your AI solution with IBM Bob, start your project page, add your team members, complete the submission requirements, and publish your project by July 31 at 11:59 PM ET. Start Your Project Page →
+
+July Challenge Details & Theme: Creative Industries 
+
+AI is transforming how people create content, tell stories, design experiences, and bring ideas to life. Creative industries are driven by imagination and expression, but the creative process is often constrained by time-consuming production workflows, technical complexity, limited access to advanced tools, and challenges turning ideas into finished outputs quickly. As demand for digital content continues to grow, creators are expected to produce more, faster, and across multiple formats than ever before.
+
+Your challenge is to build AI-powered tools that transform how creative work is imagined, produced, and experienced. Whether you're creating AI creative partners, storytelling tools, multimodal experiences, creative ideation platforms, or personalized creative assistants, your solution should demonstrate how AI can expand creative potential and redefine creative workflows. Projects should use AI as a core component and leverage IBM Bob as the primary development tool.
+
+Example Solution Areas
+
+AI creative partners
+Storytelling and content creation tools
+Multimedia and multimodal experiences
+Creative ideation and brainstorming platforms
+Interactive media and storytelling experiences
+Personalized creative assistants
+AI-powered design and visual concept tools
+Creative tools for games, virtual worlds, and immersive media
+Think About
+
+How can AI enhance creativity?
+How can AI help people create faster?
+How can AI unlock entirely new creative experiences?
+How can AI help bridge the gap between imagination and execution?
+How can AI act as a creative partner rather than simply a content generator?
+Required Technology
+
+To participate in the AI Builders Challenge, all projects must:
+
+Use IBM Bob as the primary development tool → https://bit.ly/IBMBob-freetrial  
+Include AI as a core functional component of the solution
+Recommended Technologies
+
+Participants are encouraged to explore technologies such as:
+
+IBM Granite → https://github.com/ibm-granite-community
+watsonx → https://cloud.ibm.com/registration?utm_content=academicsb
+LangChain & LangFlow → https://www.langflow.org
+Open-source AI tools
+APIs & integrations
+Python, Node.js, React, and Next.js
+Additional technologies and frameworks are welcome.
+
+Submission Requirements
+
+To be eligible for judging, your team must complete and publish your challenge submission page on the platform by Friday, July 31, 2026, at 11:59 PM ET, and complete all of the submission requirements below:
+
+1. A working prototype or proof of concept using IBM Bob
+
+(required primary development tool)
+
+2. Complete the Required IBM SkillsBuild Learning
+Every team member must complete at least one IBM Bob-related course or webinar on IBM SkillsBuild and upload their completion certificate as proof. See resources below for links to applicable courses. 
+
+3. A public GitHub repository with a clear README that includes:
+
+Problem statement
+
+Solution description
+
+AI approach and architecture
+
+Selected challenge theme
+
+How IBM Bob was used
+
+4. A published project submission page on the challenge platform that includes:
+
+Project and team member details
+
+Link to your GitHub repository
+
+A publicly accessible demo or presentation video (maximum 3 minutes)
+
+Important: Your GitHub repository and video link must be publicly accessible so judges can review and score your submission.
+
+Judging Criteria
+
+Winners will be selected by a panel of judges who will evaluate submissions based on:
+
+Technical Execution – Quality of implementation and effective use of AI and IBM technologies.
+
+Innovation – Creativity, originality, and uniqueness of the solution.
+
+Challenge Fit – Alignment with the selected challenge theme and objectives.
+
+Feasibility – Practicality and potential for real-world implementation.
+
+Real-World Impact – Ability to create meaningful value and address real-world needs.
+
+Timeline & Resources
+
+Please note: Dates for challenge webinars, additional resources, and event details will be announced soon! Be sure to join #july-challenge-and-learning channel on Discord and check the platform regularly for updates. 
+
+July 1st — July Challenge & Wild Card Challenge Launch & Github Learning Lab Opens
+
+July 7th @ 10:00 AM ET — July Challenge Kickoff Webinar [Link to Watch Replay]
+Learn about the challenge theme, submission requirements, prizes, resources, and how to get started.
+
+July 9th @ 10:00 AM ET — Team Formation Webinar [Link to Join]
+Meet other participants, find teammates, share project ideas, and learn collaboration best practices.
+
+July 15th @ 10:00 AM ET — IBM Tech Talk: DJ Software with IBM Bob [Link to Join]
+Join Rynne Whitnah, IBM Technical Lead, AI Ecosystem, for a live demonstration of building a DJ application with IBM Bob.
+
+July 31 @ 11:59 PM ET — Project Submission Deadline
+All projects must be submitted by publishing a completed project page on the challenge platform, including project details, GitHub repository link, and demo video.
+
+The GitHub repository will be publicly available to view on July 1. GitHub organization invitations will begin rolling out on July 1 and should arrive by mid-July, allowing you to fork the repository and complete the lab.
