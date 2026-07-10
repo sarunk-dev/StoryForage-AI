@@ -14,18 +14,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Image 1: Flux 2 Pro — establishes the visual universe
-    const image1 = await flux2pro(imagePrompts[0]);
+    // Generate all 4 images in parallel — Pollinations handles concurrent requests fine
+    const [image1, image2, image3, image4] = await Promise.all([
+      flux2pro(imagePrompts[0]),
+      fluxKontext(imagePrompts[1], ""),
+      fluxKontext(imagePrompts[2], ""),
+      fluxKontext(imagePrompts[3], ""),
+    ]);
 
-    // Images 2–4: Flux Kontext Pro — style-matched to image 1
-    // Run sequentially (each could reference image1 as style anchor)
-    const image2 = await fluxKontext(imagePrompts[1], image1);
-    const image3 = await fluxKontext(imagePrompts[2], image1);
-    const image4 = await fluxKontext(imagePrompts[3], image1);
-
-    const imageUrls = [image1, image2, image3, image4];
-
-    return NextResponse.json({ imageUrls });
+    return NextResponse.json({ imageUrls: [image1, image2, image3, image4] });
   } catch (error) {
     console.error("[/api/images] error:", error);
     return NextResponse.json(
