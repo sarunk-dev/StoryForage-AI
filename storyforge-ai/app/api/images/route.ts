@@ -14,14 +14,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Stagger requests by 1.5 s each to avoid Pollinations 429 rate limit.
-    // With retry back-off this still completes in ~15–25 s total.
-    const [image1, image2, image3, image4] = await Promise.all([
-      flux2pro(imagePrompts[0]),
-      fluxKontext(imagePrompts[1], "", 1500),
-      fluxKontext(imagePrompts[2], "", 3000),
-      fluxKontext(imagePrompts[3], "", 4500),
-    ]);
+    // Fully sequential with a 2 s gap — Pollinations rate-limits parallel requests.
+    const image1 = await flux2pro(imagePrompts[0]);
+    const image2 = await fluxKontext(imagePrompts[1], "", 2000);
+    const image3 = await fluxKontext(imagePrompts[2], "", 2000);
+    const image4 = await fluxKontext(imagePrompts[3], "", 2000);
 
     return NextResponse.json({ imageUrls: [image1, image2, image3, image4] });
   } catch (error) {

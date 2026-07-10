@@ -19,17 +19,16 @@ function stylePrompt(prompt: string): string {
  * Fetch with retry: on 429 wait and retry up to maxRetries times.
  */
 async function fetchWithRetry(url: string, maxRetries = 3): Promise<Response> {
-  let delay = 3000; // start at 3 s
+  let delay = 6000; // start at 6 s — Pollinations window is ~5 s
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const res = await fetch(url);
     if (res.status !== 429) return res;
     if (attempt < maxRetries) {
-      console.warn(`[pollinations] 429 rate limit — retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+      console.warn(`[pollinations] 429 — retrying in ${delay / 1000}s (attempt ${attempt + 1}/${maxRetries})`);
       await sleep(delay);
-      delay *= 2; // exponential back-off: 3s → 6s → 12s
+      delay *= 2; // exponential back-off: 6s → 12s → 24s
     }
   }
-  // Return the last response (still 429) so the caller can handle it
   return fetch(url);
 }
 
