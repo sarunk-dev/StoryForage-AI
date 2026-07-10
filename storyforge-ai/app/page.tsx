@@ -10,7 +10,7 @@ import { ArtGrid } from "@/components/ArtGrid";
 import { ExportButton } from "@/components/ExportButton";
 import { Separator } from "@/components/ui/separator";
 import type { PitchDeck, GenerationStep, Genre } from "@/lib/types";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Flame } from "lucide-react";
 
 export default function Home() {
   const [prompt, setPrompt] = useState("");
@@ -21,49 +21,37 @@ export default function Home() {
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
-
     setStep("story");
     setError(null);
     setDeck(null);
 
     try {
-      // ── Step 1–4: Text generation chain (story → characters → world → art prompts)
       const textRes = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: prompt.trim(), genre }),
       });
-
       if (!textRes.ok) {
         const errData = await textRes.json().catch(() => ({}));
         throw new Error(errData.error || "Text generation failed");
       }
-
-      const textData = await textRes.json();
-      const { story, characters, world, imagePrompts } = textData;
-
-      // Update deck with text content — show it while images generate
+      const { story, characters, world, imagePrompts } = await textRes.json();
       setDeck({ prompt, genre, story, characters, world, imagePrompts, imageUrls: [] });
       setStep("images");
 
-      // ── Step 5: Image generation
       const imgRes = await fetch("/api/images", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ imagePrompts }),
       });
-
       if (!imgRes.ok) {
         const errData = await imgRes.json().catch(() => ({}));
         throw new Error(errData.error || "Image generation failed");
       }
-
       const { imageUrls } = await imgRes.json();
-
-      setDeck((prev) => prev ? { ...prev, imageUrls } : null);
+      setDeck((prev) => (prev ? { ...prev, imageUrls } : null));
       setStep("done");
     } catch (err) {
-      console.error(err);
       setError(err instanceof Error ? err.message : "Something went wrong");
       setStep("error");
     }
@@ -73,17 +61,18 @@ export default function Home() {
   const isDone = step === "done";
   const hasText = deck?.story && deck?.characters && deck?.world;
   const hasImages = (deck?.imageUrls?.length ?? 0) > 0;
+  const showHero = step === "idle";
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Header */}
-      <header className="border-b border-border/50 bg-background/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-bold tracking-tight">StoryForge AI</h1>
-            <p className="text-xs text-muted-foreground">
-              One prompt → complete story pitch deck
-            </p>
+      {/* ── Header ──────────────────────────────────────────────────────── */}
+      <header className="sticky top-0 z-20 border-b border-border/50 bg-background/90 backdrop-blur-md">
+        <div className="max-w-3xl mx-auto px-5 h-14 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2.5">
+            <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center flex-shrink-0">
+              <Flame className="w-3.5 h-3.5 text-primary-foreground" />
+            </div>
+            <span className="font-semibold text-sm tracking-tight">StoryForge AI</span>
           </div>
           {isDone && deck && hasText && hasImages && (
             <ExportButton deck={deck as PitchDeck} />
@@ -91,58 +80,65 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-6 py-10 space-y-12">
-        {/* Hero */}
-        {step === "idle" && (
-          <div className="text-center space-y-3 pt-8 pb-4">
-            <h2 className="text-4xl font-extrabold tracking-tight">
-              Your story, fully realized
+      <main className="max-w-3xl mx-auto px-5 pb-20">
+        {/* ── Hero ──────────────────────────────────────────────────────── */}
+        {showHero && (
+          <div className="pt-16 pb-10 text-center space-y-4">
+            <div className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground border border-border/60 rounded-full px-3 py-1 mb-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block" />
+              Powered by IBM Granite 4 + Flux AI
+            </div>
+            <h2 className="text-5xl font-extrabold tracking-tight leading-[1.1] text-gradient">
+              Your story,<br />fully realized.
             </h2>
-            <p className="text-muted-foreground text-lg max-w-xl mx-auto leading-relaxed">
-              One sentence becomes a complete pitch deck — story outline,
-              characters, world-building, and concept art. In under 60 seconds.
+            <p className="text-muted-foreground text-base max-w-md mx-auto leading-relaxed">
+              One sentence becomes a complete pitch deck — story, characters,
+              world-building, and concept art in under 60 seconds.
             </p>
           </div>
         )}
 
-        {/* Input */}
-        <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-sm">
-          <PromptInput
-            value={prompt}
-            genre={genre}
-            isLoading={isLoading}
-            onChange={setPrompt}
-            onGenreChange={setGenre}
-            onSubmit={handleGenerate}
-          />
+        {/* ── Prompt input ──────────────────────────────────────────────── */}
+        <div className={`${showHero ? "pb-10" : "pt-6 pb-8"}`}>
+          <div className="rounded-2xl border border-border/60 bg-card p-5 glow-amber transition-shadow">
+            <PromptInput
+              value={prompt}
+              genre={genre}
+              isLoading={isLoading}
+              onChange={setPrompt}
+              onGenreChange={setGenre}
+              onSubmit={handleGenerate}
+            />
+          </div>
         </div>
 
-        {/* Loading pipeline */}
+        {/* ── Loading pipeline ──────────────────────────────────────────── */}
         {isLoading && (
-          <div className="rounded-2xl border border-border/40 bg-muted/20 px-6 py-2">
+          <div className="rounded-xl border border-border/40 bg-muted/20 px-5 mb-8">
             <LoadingPipeline currentStep={step} />
           </div>
         )}
 
-        {/* Error state */}
+        {/* ── Error state ───────────────────────────────────────────────── */}
         {step === "error" && error && (
-          <div className="flex items-start gap-3 rounded-xl border border-red-500/30 bg-red-500/5 p-5 text-sm text-red-700 dark:text-red-400">
-            <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+          <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive mb-8">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
             <div>
-              <div className="font-semibold mb-1">Generation failed</div>
-              <div>{error}</div>
+              <div className="font-semibold mb-0.5">Generation failed</div>
+              <div className="text-destructive/80">{error}</div>
             </div>
           </div>
         )}
 
-        {/* Results — stream in as they arrive */}
+        {/* ── Results ───────────────────────────────────────────────────── */}
         {hasText && deck && (
-          <div className="space-y-12">
+          <div className="space-y-10">
             <StorySection story={deck.story!} genre={genre} />
             <Separator />
             <CharactersSection characters={deck.characters!} />
             <Separator />
             <WorldSection world={deck.world!} />
+
             {(hasImages || step === "images") && (
               <>
                 <Separator />
@@ -153,12 +149,9 @@ export default function Home() {
               </>
             )}
 
-            {/* Export CTA at bottom too */}
             {isDone && hasImages && (
-              <div className="flex flex-col items-center gap-4 py-6 border-t border-border/50">
-                <p className="text-sm text-muted-foreground">
-                  Your pitch deck is ready.
-                </p>
+              <div className="flex flex-col items-center gap-3 pt-6 pb-2 border-t border-border/40">
+                <p className="text-sm text-muted-foreground">Your pitch deck is ready.</p>
                 <ExportButton deck={deck as PitchDeck} />
               </div>
             )}
@@ -166,8 +159,12 @@ export default function Home() {
         )}
       </main>
 
-      <footer className="text-center text-xs text-muted-foreground/50 py-8 border-t border-border/30 mt-12">
-        StoryForge AI · Built for IBM AI Builders Challenge · July 2026
+      {/* ── Footer ──────────────────────────────────────────────────────── */}
+      <footer className="border-t border-border/30 mt-12">
+        <div className="max-w-3xl mx-auto px-5 py-6 flex items-center justify-between text-xs text-muted-foreground/50">
+          <span>StoryForge AI</span>
+          <span>IBM AI Builders Challenge · July 2026</span>
+        </div>
       </footer>
     </div>
   );

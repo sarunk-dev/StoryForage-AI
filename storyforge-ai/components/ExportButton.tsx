@@ -19,7 +19,6 @@ export function ExportButton({ deck }: ExportButtonProps) {
       await exportToPDF(deck);
     } catch (err) {
       console.error("PDF export failed:", err);
-      alert("PDF export failed. Please try again.");
     } finally {
       setIsExporting(false);
     }
@@ -29,18 +28,18 @@ export function ExportButton({ deck }: ExportButtonProps) {
     <Button
       onClick={handleExport}
       disabled={isExporting}
-      size="lg"
-      variant="default"
-      className="gap-2 font-semibold"
+      size="sm"
+      variant="outline"
+      className="gap-1.5 font-medium border-border/60 hover:border-primary/40 hover:text-primary transition-colors"
     >
       {isExporting ? (
         <>
-          <Loader2 className="w-4 h-4 animate-spin" />
-          Generating PDF…
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          Exporting…
         </>
       ) : (
         <>
-          <Download className="w-4 h-4" />
+          <Download className="w-3.5 h-3.5" />
           Export PDF
         </>
       )}

@@ -2,7 +2,6 @@
 
 import type { WorldBuilding } from "@/lib/types";
 import { Globe } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
 
 interface WorldSectionProps {
   world: WorldBuilding;
@@ -17,35 +16,25 @@ export function WorldSection({ world }: WorldSectionProps) {
 
   return (
     <section className="space-y-6">
-      <div className="flex items-center gap-2 text-muted-foreground text-sm font-medium uppercase tracking-wider">
-        <Globe className="w-4 h-4" />
+      <div className="flex items-center gap-2 section-label">
+        <Globe className="w-3.5 h-3.5" />
         World Building
       </div>
 
-      <div className="bg-muted/30 rounded-xl border border-border/60 p-6 space-y-5">
-        <div>
-          <h3 className="text-2xl font-bold text-foreground tracking-tight mb-1">
-            {world.settingName}
-          </h3>
-          <p className="text-muted-foreground italic text-sm">
-            {world.atmosphere}
-          </p>
-        </div>
+      {/* Ink-surface setting card */}
+      <div className="rounded-2xl ink-surface px-6 py-5 space-y-1">
+        <h3 className="text-xl font-bold tracking-tight">{world.settingName}</h3>
+        <p className="text-sm leading-relaxed opacity-60 italic">{world.atmosphere}</p>
+      </div>
 
-        <Separator />
-
-        <div className="grid gap-5 sm:grid-cols-3">
-          {fields.map(({ label, value }) => (
-            <div key={label} className="space-y-1.5">
-              <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {label}
-              </div>
-              <p className="text-sm leading-relaxed text-foreground/90">
-                {value}
-              </p>
-            </div>
-          ))}
-        </div>
+      {/* Fields grid */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        {fields.map(({ label, value }) => (
+          <div key={label} className="space-y-1.5">
+            <div className="section-label">{label}</div>
+            <p className="text-sm leading-relaxed text-foreground/80">{value}</p>
+          </div>
+        ))}
       </div>
     </section>
   );
