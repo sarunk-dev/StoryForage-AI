@@ -91,20 +91,36 @@ export default function Home() {
 
       setDeck({ prompt, genre: options.genre, story, characters, world, imagePrompts, imageUrls: [], actAudioUrls });
 
-      // ── Image generation ─────────────────────────────────────────────────
+      // ── Image generation — one image at a time, each renders immediately ──
       setStep("images");
 
-      const imgRes = await fetch("/api/images", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imagePrompts }),
-      });
-      if (!imgRes.ok) {
-        const errData = await imgRes.json().catch(() => ({}));
-        throw new Error(errData.error || "Image generation failed");
+      // Initialise 4 empty slots so ArtGrid skeletons show from the start
+      const urls: (string | null)[] = [null, null, null, null];
+
+      for (let i = 0; i < imagePrompts.length; i++) {
+        try {
+          const imgRes = await fetch("/api/images", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              prompt: imagePrompts[i],
+              index:  i,
+              genre:  options.genre !== "None" ? options.genre : undefined,
+              tone:   options.tone  !== "Any"  ? options.tone  : undefined,
+            }),
+          });
+          if (imgRes.ok) {
+            const { imageUrl } = await imgRes.json();
+            urls[i] = imageUrl;
+            // Push the latest snapshot so the UI updates as each image arrives
+            const snapshot = urls.map((u) => u ?? "").filter(Boolean);
+            setDeck((prev) => prev ? { ...prev, imageUrls: snapshot } : null);
+          }
+        } catch {
+          // Non-fatal — continue to next image if one fails
+        }
       }
-      const { imageUrls } = await imgRes.json();
-      setDeck((prev) => (prev ? { ...prev, imageUrls } : null));
+
       setStep("done");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");

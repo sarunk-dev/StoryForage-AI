@@ -1,33 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import { flux2pro, fluxKontext } from "@/lib/replicate";
+import { pollinationsImage } from "@/lib/replicate";
 
 export async function POST(req: NextRequest) {
   try {
-    const { imagePrompts } = (await req.json()) as {
-      imagePrompts: string[];
+    const { prompt, index, genre, tone } = (await req.json()) as {
+      prompt: string;
+      index: number;       // 0-3 — which of the 4 images
+      genre?: string;
+      tone?: string;
     };
 
-    if (!Array.isArray(imagePrompts) || imagePrompts.length === 0) {
-      return NextResponse.json(
-        { error: "imagePrompts array is required" },
-        { status: 400 }
-      );
+    if (!prompt?.trim()) {
+      return NextResponse.json({ error: "prompt is required" }, { status: 400 });
     }
 
-    // Fully sequential with a 2 s gap — Pollinations rate-limits parallel requests.
-    const image1 = await flux2pro(imagePrompts[0]);
-    const image2 = await fluxKontext(imagePrompts[1], "", 2000);
-    const image3 = await fluxKontext(imagePrompts[2], "", 2000);
-    const image4 = await fluxKontext(imagePrompts[3], "", 2000);
-
-    return NextResponse.json({ imageUrls: [image1, image2, image3, image4] });
+    const imageUrl = await pollinationsImage(prompt, index, genre, tone);
+    return NextResponse.json({ imageUrl });
   } catch (error) {
     console.error("[/api/images] error:", error);
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error ? error.message : "Image generation failed",
-      },
+      { error: error instanceof Error ? error.message : "Image generation failed" },
       { status: 500 }
     );
   }

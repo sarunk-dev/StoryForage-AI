@@ -100,7 +100,7 @@ export function PromptInput({
         </div>
       )}
 
-      {/* ── Tier 1 row: Genre · Tone · Length · Ending ──────────────────── */}
+      {/* ── Row 1: Genre · Tone ──────────────────────────────────────────── */}
       <div className="flex flex-wrap gap-2 items-center">
         {/* Genre */}
         <Select
@@ -108,7 +108,7 @@ export function PromptInput({
           onValueChange={(v) => onOptionsChange({ genre: v as StoryOptions["genre"] })}
           disabled={isLoading}
         >
-          <SelectTrigger className={`w-[130px] ${triggerCls}`}>
+          <SelectTrigger className={`w-[148px] ${triggerCls}`}>
             <span className="truncate">{GENRE_LABEL(options.genre)}</span>
           </SelectTrigger>
           <SelectContent>
@@ -125,7 +125,7 @@ export function PromptInput({
           onValueChange={(v) => onOptionsChange({ tone: v as StoryOptions["tone"] })}
           disabled={isLoading}
         >
-          <SelectTrigger className={`w-[175px] ${triggerCls}`}>
+          <SelectTrigger className={`w-[185px] ${triggerCls}`}>
             <span className="truncate">{TONE_LABEL(options.tone)}</span>
           </SelectTrigger>
           <SelectContent>
@@ -135,14 +135,17 @@ export function PromptInput({
             ))}
           </SelectContent>
         </Select>
+      </div>
 
+      {/* ── Row 2: Scope · Ending · Advanced ────────────────────────────── */}
+      <div className="flex flex-wrap gap-2 items-center">
         {/* Scope */}
         <Select
           value={options.length}
           onValueChange={(v) => onOptionsChange({ length: v as StoryOptions["length"] })}
           disabled={isLoading}
         >
-          <SelectTrigger className={`w-[150px] ${triggerCls}`}>
+          <SelectTrigger className={`w-[148px] ${triggerCls}`}>
             <span className="truncate">{LENGTH_LABEL(options.length)}</span>
           </SelectTrigger>
           <SelectContent>
@@ -153,7 +156,7 @@ export function PromptInput({
           </SelectContent>
         </Select>
 
-        {/* Ending */}
+        {/* Ending — right next to Scope */}
         <Select
           value={options.ending}
           onValueChange={(v) => onOptionsChange({ ending: v as StoryOptions["ending"] })}
