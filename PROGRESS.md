@@ -20,32 +20,34 @@
 |---|---|---|
 | PRD & architecture | ✅ Done | v1.1 finalized |
 | Skills installed | ✅ Done | vercel-react-best-practices, shadcn, deployment-pipeline-design |
-| Replicate API (Flux 2 Pro) | ✅ Tested & working | `MytestedFiles/flux_2_pro_test.py` |
-| Replicate API (Flux Kontext Pro) | ✅ Tested & working | `MytestedFiles/flux_kontext_test.py` |
 | Next.js project scaffold | ✅ Done | `storyforge-ai/`, shadcn/ui, Tailwind, all deps |
-| `lib/types.ts` | ✅ Done | All TypeScript interfaces + step types |
-| `lib/prompts.ts` | ✅ Done | 4 prompt templates with JSON schemas |
+| `lib/types.ts` | ✅ Done | All TypeScript interfaces + step types + StoryOptions |
+| `lib/prompts.ts` | ✅ Done | 4 prompt templates — story/character/world/art; advanced options support |
 | `lib/granite.ts` | ✅ Done | WatsonXAI client, generateJSON with retry, parseJSON |
-| `lib/replicate.ts` | ✅ Done | flux2pro() + fluxKontext() with base64 output |
-| `lib/pdfExport.ts` | ✅ Done | Full styled A4 jsPDF export with images |
-| `app/api/generate/route.ts` | ✅ Done | Sequential 4-step Granite chain |
-| `app/api/images/route.ts` | ✅ Done | Flux 2 Pro → Flux Kontext Pro pipeline |
-| `components/PromptInput.tsx` | ✅ Done | Textarea + genre selector + submit |
-| `components/LoadingPipeline.tsx` | ✅ Done | 5-step animated progress indicator |
-| `components/StorySection.tsx` | ✅ Done | Story outline display |
+| `lib/replicate.ts` | ✅ Done | Pollinations.ai (free, no key) — 768×768 FLUX, retry logic |
+| `lib/pdfExport.ts` | ✅ Done | Full styled A4 jsPDF export with images; theme+tone on separate lines |
+| `app/api/generate/route.ts` | ✅ Done | Sequential 4-step Granite chain with advanced options |
+| `app/api/images/route.ts` | ✅ Done | Pollinations image generation, index-based dispatch |
+| `app/api/narrate/route.ts` | ✅ Done | ElevenLabs TTS — per-genre voices, per-act dynamics, client-side retry |
+| `components/PromptInput.tsx` | ✅ Done | Single-row layout: Genre + Scope + Advanced panel (Tone/Ending/Audience/Era) |
+| `components/LoadingPipeline.tsx` | ✅ Done | 6-step animated progress indicator (incl. audio step) |
+| `components/StorySection.tsx` | ✅ Done | Story outline + per-act audio playback buttons |
 | `components/CharacterCard.tsx` | ✅ Done | Character cards + CharactersSection |
 | `components/WorldSection.tsx` | ✅ Done | World-building display |
-| `components/ArtGrid.tsx` | ✅ Done | 2×2 image grid with loading skeletons |
+| `components/ArtGrid.tsx` | ✅ Done | 2×2 square grid, object-cover, hover label overlay |
 | `components/ExportButton.tsx` | ✅ Done | PDF download trigger (lazy-loaded) |
-| `app/page.tsx` | ✅ Done | Full wired UI, streaming reveal, error states |
-| TypeScript build | ✅ Passing | `next build` — 0 errors, 0 warnings |
-| End-to-end API test | ✅ Working | Full pipeline tested — story → characters → world → art prompts → images → PDF |
-| UI polish pass | ⬜ Not started | |
+| `app/page.tsx` | ✅ Done | Full wired UI, progressive reveal, dark mode, error states |
+| TypeScript build | ✅ Passing | `tsc --noEmit` — 0 errors |
+| End-to-end pipeline test | ✅ Working | Story → characters → world → art prompts → images → audio (3 acts) → PDF |
+| Audio narration (3 acts) | ✅ Fixed | All 3 acts generating; client-side retry + 2s gaps between calls |
+| Image display (web) | ✅ Fixed | Square aspect ratio, object-cover, no stretch/crop |
+| PDF layout | ✅ Fixed | Theme + Tone on separate lines; images square to match 768×768 output |
 | Vercel deployment | ⬜ Not started | |
+| README.md | ⬜ Not started | Required for submission |
 | Demo rehearsal | ⬜ Not started | |
 | Submission page | ⬜ Not started | |
 
-**Bob tokens used:** ~0 / 60 _(scaffold completed without Bob — all tokens preserved for Granite debugging + polish)_
+**Bob tokens used:** ~15–20 / 60 _(estimated — audio fixes, UI polish, PDF fixes, image pipeline)_
 
 ---
 
@@ -53,139 +55,132 @@
 
 ### Skills Installed (Pre Day 1)
 
-| Skill | Installs | Purpose |
-|---|---|---|
-| `vercel-labs/agent-skills@vercel-react-best-practices` | 540K | React/Next.js best practices guidance |
-| `shadcn/ui@shadcn` | 228K | shadcn/ui component patterns |
-| `wshobson/agents@deployment-pipeline-design` | 10K | Vercel deployment patterns |
+| Skill | Purpose |
+|---|---|
+| `vercel-react-best-practices` | React/Next.js best practices guidance |
+| `shadcn` | shadcn/ui component patterns |
+| `deployment-pipeline-design` | Vercel deployment patterns |
 
 ---
 
 ### Pre-Build Planning (Pre Day 1)
 
-**Date:** Before sprint start
+**Replicate API integrations validated (Python test scripts):**
 
-#### API Integrations Validated
+| File | Model | Status |
+|---|---|---|
+| `MytestedFiles/flux_2_pro_test.py` | `black-forest-labs/flux-2-pro` | ✅ Working |
+| `MytestedFiles/flux_kontext_test.py` | `black-forest-labs/flux-kontext-pro` | ✅ Working |
+| `MytestedFiles/Elevnlab_test.py` | ElevenLabs TTS v1 | ✅ Working |
 
-| File | Model | Status | Key findings |
-|---|---|---|---|
-| `MytestedFiles/flux_2_pro_test.py` | `black-forest-labs/flux-2-pro` | ✅ Working | Uses `replicate.run()` sync; output has `.url` and `.read()` methods; supports `resolution`, `aspect_ratio`, `output_format`, `output_quality`, `safety_tolerance` params |
-| `MytestedFiles/flux_kontext_test.py` | `black-forest-labs/flux-kontext-pro` | ✅ Working | Requires `input_image` as base64 data URL (`data:image/png;base64,...`); `image_to_data_url()` helper confirmed working; supports `aspect_ratio: "match_input_image"` to preserve dimensions |
+**Architecture decisions:** Sequential prompt chain (not LangGraph), Next.js API routes (not FastAPI), client-side jsPDF (not html2canvas).
 
-**Critical pattern to port to Node.js `lib/replicate.ts`:**
-```python
-# Python (tested) → port this logic to TypeScript
-def image_to_data_url(image_path):
-    mime_type = mimetypes.guess_type(image_path)[0] or "image/png"
-    with open(image_path, "rb") as image_file:
-        encoded = base64.b64encode(image_file.read()).decode("utf-8")
-    return f"data:{mime_type};base64,{encoded}"
-```
-In TypeScript: fetch image bytes from Flux 2 Pro URL → `Buffer.from(bytes).toString('base64')` → prepend `data:image/png;base64,`.
+---
 
-#### Architecture & PRD Decisions Finalized
+### Phase 1 — Foundation ✅ COMPLETE
 
-- ✅ Switched from 8-agent StoryVerse concept → clean 5-step sequential chain (StoryForge AI)
-- ✅ Dropped FastAPI backend → Next.js API routes only (one repo, one deploy)
-- ✅ Dropped LangGraph → simple sequential prompt chain (same coherence, far less complexity)
-- ✅ Dropped Flux Schnell → upgraded to **Flux 2 Pro** (base) + **Flux Kontext Pro** (style-matched), both confirmed working
-- ✅ Image strategy confirmed: Image 1 (Flux 2 Pro) sets visual universe; Images 2–4 (Flux Kontext) are style-locked to Image 1
-- ✅ Dropped S3/Supabase/ElevenLabs — zero infra overhead
-- ✅ PDF export approach: html2canvas + jsPDF, client-side, images pre-fetched as base64
+- [x] Next.js scaffold + shadcn/ui + Tailwind + all deps
+- [x] `lib/types.ts` — all interfaces + `StoryOptions` + `GenerationStep`
+- [x] `lib/prompts.ts` — 4 prompt templates with JSON schemas
+- [x] `lib/granite.ts` — WatsonXAI client, retry, parseJSON
+- [x] `lib/replicate.ts` — Pollinations.ai, FLUX, 768×768, base64 output
+- [x] `app/api/generate/route.ts` — sequential Granite chain
+- [x] `app/api/images/route.ts` — image generation endpoint
+- [x] All UI components built and wired
+- [x] `app/page.tsx` — full end-to-end UI
+- [x] `tsc --noEmit` passing, 0 errors
+
+---
+
+### Phase 2 — API Integration + Polish ✅ COMPLETE
+
+- [x] End-to-end pipeline confirmed working (Granite + Pollinations + jsPDF)
+- [x] Switched image provider: Replicate (paid) → **Pollinations.ai** (free, no API key needed)
+- [x] Pollinations 429 rate-limit handling: sequential generation + exponential retry
+- [x] **ElevenLabs audio narration added** — per-act TTS playback in StorySection
+  - Per-genre voice profiles (George/Harry/Brian/Sarah/Callum/Charlie/Daniel)
+  - Per-act dynamics overlay (stability + style tuning per act)
+  - Text pre-processing for natural delivery
+- [x] **Advanced story options added** — Tone, Ending, Audience, Era dropdowns in collapsible panel
+- [x] **Dark mode** toggle added to header
+- [x] **PDF export** — full styled A4 with all content and 4 images
+- [x] **UI redesign** — wider layout (max-w-5xl), amber accent, improved typography
+
+---
+
+### Phase 3 — Bug Fixes & Polish ✅ COMPLETE
+
+- [x] **Audio fix — all 3 acts:** Root cause was server-side retry loop with `sleep()` hitting dev-mode Node timeout; fixed by moving retry logic to client (`page.tsx`): 2 attempts × 3s back-off, 2s gap between acts
+- [x] **Image display fix:** `object-cover` + `aspect-square` (web) matched to 768×768 FLUX output — no stretch, no letterbox
+- [x] **PDF fix — Tone bleeding:** Theme and Tone now on separate wrapped lines via `splitTextToSize`; no longer overflows the page border
+- [x] **Image prompts reverted** to `65370ef` state — simpler, more open-ended format produced better concept art
+- [x] **Prompt input layout** — collapsed to single row; Tone + Ending moved into Advanced panel; badge counter includes all 4 advanced fields
+- [x] **ArtGrid** — `animate-in fade-in` on each image as it loads; stable 4-slot layout prevents shift during generation
 
 ---
 
 ## 🔄 In Progress
 
-⬜ UI polish pass — loading skeletons, error states, typography check
+_Nothing active. Phase 3 complete._
 
 ---
 
-## 📋 Build Task Checklist
+## 📋 Remaining Tasks
 
-### Phase 1 — Foundation (Days 1–4) ✅ COMPLETE
+### Phase 4 — Deployment (Manual)
 
-- [x] **Day 1 · Scaffold** — Next.js + shadcn/ui + all dependencies installed
-  - [x] `npx create-next-app storyforge-ai --typescript --tailwind --app`
-  - [x] `npx shadcn@latest init` + components: button, textarea, select, badge, card, separator, progress
-  - [x] `npm install zod replicate @ibm-cloud/watsonx-ai html2canvas jspdf`
-  - [x] Folder structure (`components/`, `lib/`, `app/api/`)
-  - [x] `lib/types.ts` — all TypeScript interfaces
-  - [x] `.env.local` — template with all required keys
-  - [x] First git commit
-  - Bob tokens used: **0** _(done manually)_
+- [ ] `vercel deploy` from `storyforge-ai/` root
+- [ ] Set env vars in Vercel dashboard:
+  - `WATSONX_API_KEY`
+  - `WATSONX_PROJECT_ID`
+  - `ELEVENLABS_API_KEY`
+  - _(no key needed for Pollinations)_
+- [ ] Test full pipeline on live Vercel URL
+- [ ] Chrome + Firefox cross-browser check
+- [ ] Confirm PDF download works on deployed URL
+- [ ] Confirm audio plays on deployed URL (browser autoplay policy check)
 
-- [x] **Day 2–3 · Granite** — client + prompts + API route
-  - [x] `lib/granite.ts` — WatsonXAI client (named export fix), IamAuthenticator, generateJSON with retry
-  - [x] `lib/prompts.ts` — 4 prompt templates with embedded JSON schemas
-  - [x] `app/api/generate/route.ts` — sequential chain, typed response
-  - Bob tokens used: **0** _(done manually)_
+### Phase 5 — README (Required for Submission)
 
-- [x] **Day 4 · Replicate** — image pipeline
-  - [x] `lib/replicate.ts` — flux2pro() + fluxKontext(), URL→base64 helper, DEV_IMAGE_MODEL swap
-  - [x] `app/api/images/route.ts` — Flux 2 Pro → Flux Kontext Pro pipeline
-  - Bob tokens used: **0** _(done manually)_
+- [ ] Write `README.md` covering:
+  - [ ] Problem statement
+  - [ ] Solution description + architecture diagram
+  - [ ] AI approach: Granite (text) + Pollinations/FLUX (images) + ElevenLabs (audio)
+  - [ ] How IBM Bob was used (specific sessions + what it built)
+  - [ ] Setup instructions (`npm install`, `.env.local` keys, `npm run dev`)
+  - [ ] Live demo URL
 
-- [x] **UI — all components** — built and wired
-  - [x] `components/PromptInput.tsx`
-  - [x] `components/LoadingPipeline.tsx`
-  - [x] `components/StorySection.tsx`
-  - [x] `components/CharacterCard.tsx` + `CharactersSection`
-  - [x] `components/WorldSection.tsx`
-  - [x] `components/ArtGrid.tsx`
-  - [x] `components/ExportButton.tsx`
-  - [x] `app/page.tsx` — full wired UI
-  - Bob tokens used: **0** _(done manually)_
+### Phase 6 — Demo Rehearsal (Manual)
 
-- [x] **Build validation** — `npm run build` PASSING, 0 TypeScript errors
+- [ ] Run full pipeline 5× with different prompts and genres
+- [ ] Time each run — target ≤60s for text, ≤90s including images
+- [ ] Check audio plays cleanly for all 3 acts across genres
+- [ ] Record a practice run of the 90-second demo script (see PRD §H.3)
+- [ ] Watch it back — fix any awkward moments
 
-### Phase 2 — API Key Test + Polish (Days 5–11)
+### Phase 7 — Submission (Deadline: July 31, 11:59 PM ET)
 
-- [x] **End-to-end pipeline test** — ✅ Working as expected
-  - [x] `WATSONX_API_KEY`, `WATSONX_PROJECT_ID`, `REPLICATE_API_TOKEN` confirmed in `.env.local`
-  - [x] Story generation → JSON output ✅
-  - [x] Image generation (Flux 2 Pro + Flux Kontext Pro) ✅
-  - [x] PDF export ✅
-  - Bob tokens used: **0** _(all fixes done manually/diagnostically)_
-
-### Phase 3 — PDF + Integration (Days 9–10)
-
-- [ ] **UI polish pass**
-  - [ ] Verify loading skeletons render during image generation
-  - [ ] Verify error state shows correct message
-  - [ ] Check typography + spacing on all sections
-  - [ ] Test ⌘+Enter keyboard shortcut
-  - Bob tokens target: **3–5**
-
-- [ ] **Day 12** (Manual) — Deployment
-  - [ ] `vercel deploy` from project root
-  - [ ] Set `WATSONX_API_KEY`, `WATSONX_PROJECT_ID`, `REPLICATE_API_TOKEN` in Vercel dashboard
-  - [ ] Test full pipeline on live Vercel URL
-  - [ ] Chrome + Firefox cross-browser check
-  - [ ] Confirm PDF download works on deployed URL
-
-- [ ] **Day 13** (Manual) — Demo rehearsal
-  - [ ] Run full pipeline 5× with different prompts
-  - [ ] Time the generation (target ≤60s)
-  - [ ] Record a practice run of the 90-second demo script
-  - [ ] Watch it back — fix any awkward moments in the flow
-
-- [ ] **Day 14** (Manual + 1 Bob task max) — Submission
-  - [ ] Write `README.md` (problem statement, solution, AI approach, architecture, how IBM Bob was used)
-  - [ ] Make GitHub repo public
-  - [ ] Record final demo video (max 3 minutes)
-  - [ ] Complete submission page on challenge platform
-  - [ ] Publish submission before July 31 @ 11:59 PM ET
+- [ ] Make GitHub repo public
+- [ ] Record final demo video (max 3 minutes)
+- [ ] Complete submission page on challenge platform:
+  - [ ] Project + team member details
+  - [ ] GitHub repo link
+  - [ ] Demo video link
+- [ ] IBM SkillsBuild learning certificate uploaded
+- [ ] Submit before deadline ✅
 
 ---
 
 ## 🐛 Issues & Resolutions
 
-_Log blockers, bugs, and how they were resolved here as they come up._
-
-| Date | Issue | Resolution | Status |
+| Date | Issue | Root Cause | Resolution |
 |---|---|---|---|
-| — | — | — | — |
+| Sprint | Replicate (paid) unavailable | No Replicate token budget | Switched to Pollinations.ai (free, no key, FLUX model) |
+| Sprint | Act 2 + Act 3 audio silent | Server-side retry loop with `sleep()` hit implicit ~10s Node dev timeout | Moved retry to client: 2 attempts + 3s back-off, 2s gaps between act calls |
+| Sprint | Images stretched/zoomed in web | `object-cover` on non-square images; different per-slot aspect ratios | Reverted all slots to 768×768 square; `aspect-square` + `object-cover` = perfect fit |
+| Sprint | Tone bleeding off PDF border | Theme + Tone on one unbreakable line — `pdf.text()` has no wrapping | Split into two separate `splitTextToSize` → `pdf.text()` calls |
+| Sprint | Act 3 audio missing (earlier) | No retry + no `maxDuration` on route | Added `maxDuration = 30` + 500ms gaps (later superseded by client-side retry fix) |
+| Sprint | Image prompts too rigid | Over-specified format with 4:3 ratio hints and per-slot rules | Reverted to simpler open-ended `65370ef` format — better outputs |
 
 ---
 
@@ -193,18 +188,19 @@ _Log blockers, bugs, and how they were resolved here as they come up._
 
 | Date | Decision | Rationale |
 |---|---|---|
-| Pre-sprint | Switched from StoryVerse (8-agent) to StoryForge AI (5-step chain) | Feasibility + reliability > ambition for solo 2-week build |
-| Pre-sprint | Upgraded from Flux Schnell to Flux 2 Pro + Flux Kontext Pro | Both already tested and working; Kontext Pro makes the 4-image set visually coherent — real differentiator |
-| Pre-sprint | Dropped FastAPI backend for Next.js API routes | One repo, one deploy, zero ops |
-| Pre-sprint | Chose html2canvas + jsPDF for PDF export | Client-side, no server cost, handles base64 images natively |
-| Pre-sprint | Use `zod` for Granite JSON response validation | Catches schema drift early, typed safety for free |
-| Pre-sprint | Use Flux Schnell during dev iterations, Flux 2 Pro for final demo | Cost management during testing |
+| Pre-sprint | Sequential chain (not LangGraph) | Same coherence, far less complexity for solo 2-week build |
+| Pre-sprint | Next.js API routes (not FastAPI) | One repo, one deploy, zero ops |
+| Pre-sprint | jsPDF (not html2canvas) | Client-side, no CORS issues, precise layout control |
+| Sprint | Switched Replicate → Pollinations.ai | Free, no API key, FLUX model, same base64 output pattern |
+| Sprint | Added ElevenLabs TTS narration | Strong differentiator — audio brings the pitch deck to life |
+| Sprint | Added advanced story options (Tone/Ending/Audience/Era) | More creative control → better outputs → stronger demo |
+| Sprint | Audio retry moved to client-side | Server-side `sleep()` inside route hit dev-mode Node timeout; client has no such limit |
+| Sprint | Image prompts reverted to `65370ef` | Simpler prompts produced better, more consistent concept art |
+| Sprint | All images 768×768 square | Uniform size = perfect fit in `aspect-square` grid; no per-slot dimension complexity |
 
 ---
 
 ## 📦 Submission Checklist (Final)
-
-Required by challenge rules — check off before July 31:
 
 - [ ] Working prototype using IBM Bob as primary dev tool
 - [ ] IBM SkillsBuild learning certificate completed and uploaded
@@ -227,11 +223,15 @@ Required by challenge rules — check off before July 31:
 |---|---|
 | [`PRD_Final.md`](PRD_Final.md) | Full product spec, architecture, build plan, Bob budget |
 | [`PROGRESS.md`](PROGRESS.md) | This file — living build log |
-| [`MytestedFiles/flux_2_pro_test.py`](MytestedFiles/flux_2_pro_test.py) | ✅ Validated Flux 2 Pro integration pattern |
-| [`MytestedFiles/flux_kontext_test.py`](MytestedFiles/flux_kontext_test.py) | ✅ Validated Flux Kontext Pro integration pattern |
-| `prompt.txt` | Original challenge brief |
-| `PRD_Draft1.md` | Original StoryVerse concept (reference only) |
+| [`storyforge-ai/app/api/narrate/route.ts`](storyforge-ai/app/api/narrate/route.ts) | ElevenLabs TTS route — per-genre voices, per-act dynamics |
+| [`storyforge-ai/app/api/generate/route.ts`](storyforge-ai/app/api/generate/route.ts) | Granite sequential chain |
+| [`storyforge-ai/app/api/images/route.ts`](storyforge-ai/app/api/images/route.ts) | Pollinations image generation |
+| [`storyforge-ai/lib/pdfExport.ts`](storyforge-ai/lib/pdfExport.ts) | jsPDF styled A4 export |
+| [`storyforge-ai/components/StorySection.tsx`](storyforge-ai/components/StorySection.tsx) | Story outline + audio player buttons |
+| [`MytestedFiles/Elevnlab_test.py`](MytestedFiles/Elevnlab_test.py) | ✅ Validated ElevenLabs TTS pattern |
+| [`MytestedFiles/flux_2_pro_test.py`](MytestedFiles/flux_2_pro_test.py) | ✅ Validated Flux 2 Pro pattern (reference) |
+| [`MytestedFiles/flux_kontext_test.py`](MytestedFiles/flux_kontext_test.py) | ✅ Validated Flux Kontext Pro pattern (reference) |
 
 ---
 
-*Last updated: Pre-sprint planning complete. Ready to begin Day 1.*
+*Last updated: Phase 3 complete. Audio (all 3 acts), images, and PDF all working. Ready for deployment.*
