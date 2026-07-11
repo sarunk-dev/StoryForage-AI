@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PromptInput } from "@/components/PromptInput";
 import { LoadingPipeline } from "@/components/LoadingPipeline";
 import { StorySection } from "@/components/StorySection";
@@ -10,7 +10,10 @@ import { ArtGrid } from "@/components/ArtGrid";
 import { ExportButton } from "@/components/ExportButton";
 import { Separator } from "@/components/ui/separator";
 import type { PitchDeck, GenerationStep, Genre } from "@/lib/types";
-import { AlertCircle, Flame } from "lucide-react";
+import { AlertCircle, Flame, Moon, Sun } from "lucide-react";
+
+// Small helper: resolves after `ms` milliseconds
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export default function Home() {
   const [prompt, setPrompt] = useState("");
@@ -18,6 +21,17 @@ export default function Home() {
   const [step, setStep] = useState<GenerationStep>("idle");
   const [error, setError] = useState<string | null>(null);
   const [deck, setDeck] = useState<Partial<PitchDeck> | null>(null);
+  const [dark, setDark] = useState(false);
+
+  // Apply / remove dark class on <html>
+  useEffect(() => {
+    const root = document.documentElement;
+    if (dark) {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+  }, [dark]);
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
@@ -26,6 +40,7 @@ export default function Home() {
     setDeck(null);
 
     try {
+      // ── Text generation ──────────────────────────────────────────────
       const textRes = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -36,7 +51,51 @@ export default function Home() {
         throw new Error(errData.error || "Text generation failed");
       }
       const { story, characters, world, imagePrompts } = await textRes.json();
+
+      // ── Visual micro-delays for intermediate steps ────────────────────
+      // "characters" step
+      setStep("characters");
+      await sleep(900);
+      // "world" step
+      setStep("world");
+      await sleep(900);
+      // "artPrompts" step
+      setStep("artPrompts");
+      await sleep(900);
+
       setDeck({ prompt, genre, story, characters, world, imagePrompts, imageUrls: [] });
+
+      // ── Audio narration (sequential — avoids ElevenLabs rate-limit) ──
+      setStep("audio");
+
+      const narrateAct = async (text: string): Promise<string | undefined> => {
+        try {
+          const res = await fetch("/api/narrate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text, genre }),
+          });
+          if (!res.ok) return undefined;
+          const { audioBase64 } = await res.json();
+          return audioBase64 as string;
+        } catch {
+          return undefined;
+        }
+      };
+
+      const act1Audio = await narrateAct(story.acts.act1);
+      const act2Audio = await narrateAct(story.acts.act2);
+      const act3Audio = await narrateAct(story.acts.act3);
+
+      const actAudioUrls: { act1?: string; act2?: string; act3?: string } = {
+        ...(act1Audio ? { act1: act1Audio } : {}),
+        ...(act2Audio ? { act2: act2Audio } : {}),
+        ...(act3Audio ? { act3: act3Audio } : {}),
+      };
+
+      setDeck({ prompt, genre, story, characters, world, imagePrompts, imageUrls: [], actAudioUrls });
+
+      // ── Image generation ──────────────────────────────────────────────
       setStep("images");
 
       const imgRes = await fetch("/api/images", {
@@ -67,23 +126,35 @@ export default function Home() {
     <div className="min-h-screen bg-background text-foreground">
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-20 border-b border-border/50 bg-background/90 backdrop-blur-md">
-        <div className="max-w-3xl mx-auto px-5 h-14 flex items-center justify-between gap-4">
+        <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
             <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center flex-shrink-0">
               <Flame className="w-3.5 h-3.5 text-primary-foreground" />
             </div>
             <span className="font-semibold text-sm tracking-tight">StoryForge AI</span>
           </div>
-          {isDone && deck && hasText && hasImages && (
-            <ExportButton deck={deck as PitchDeck} />
-          )}
+
+          <div className="flex items-center gap-3">
+            {/* Dark mode toggle */}
+            <button
+              onClick={() => setDark((d) => !d)}
+              aria-label="Toggle dark mode"
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+            >
+              {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+
+            {isDone && deck && hasText && hasImages && (
+              <ExportButton deck={deck as PitchDeck} />
+            )}
+          </div>
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-5 pb-20">
+      <main className="max-w-5xl mx-auto px-6 pb-24">
         {/* ── Hero ──────────────────────────────────────────────────────── */}
         {showHero && (
-          <div className="pt-16 pb-10 text-center space-y-4">
+          <div className="pt-16 pb-10 text-center space-y-4 max-w-2xl mx-auto">
             <div className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground border border-border/60 rounded-full px-3 py-1 mb-2">
               <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block" />
               Powered by IBM Granite 4 + Flux AI
@@ -99,7 +170,7 @@ export default function Home() {
         )}
 
         {/* ── Prompt input ──────────────────────────────────────────────── */}
-        <div className={`${showHero ? "pb-10" : "pt-6 pb-8"}`}>
+        <div className={`${showHero ? "pb-10 max-w-2xl mx-auto" : "pt-6 pb-8 max-w-2xl mx-auto"}`}>
           <div className="rounded-2xl border border-border/60 bg-card p-5 glow-amber transition-shadow">
             <PromptInput
               value={prompt}
@@ -133,7 +204,11 @@ export default function Home() {
         {/* ── Results ───────────────────────────────────────────────────── */}
         {hasText && deck && (
           <div className="space-y-10">
-            <StorySection story={deck.story!} genre={genre} />
+            <StorySection
+              story={deck.story!}
+              genre={genre}
+              actAudioUrls={deck.actAudioUrls}
+            />
             <Separator />
             <CharactersSection characters={deck.characters!} />
             <Separator />
@@ -161,7 +236,7 @@ export default function Home() {
 
       {/* ── Footer ──────────────────────────────────────────────────────── */}
       <footer className="border-t border-border/30 mt-12">
-        <div className="max-w-3xl mx-auto px-5 py-6 flex items-center justify-between text-xs text-muted-foreground/50">
+        <div className="max-w-5xl mx-auto px-6 py-6 flex items-center justify-between text-xs text-muted-foreground/50">
           <span>StoryForge AI</span>
           <span>IBM AI Builders Challenge · July 2026</span>
         </div>

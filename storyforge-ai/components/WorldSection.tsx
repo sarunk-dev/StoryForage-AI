@@ -22,17 +22,17 @@ export function WorldSection({ world }: WorldSectionProps) {
       </div>
 
       {/* Ink-surface setting card */}
-      <div className="rounded-2xl ink-surface px-6 py-5 space-y-1">
-        <h3 className="text-xl font-bold tracking-tight">{world.settingName}</h3>
-        <p className="text-sm leading-relaxed opacity-60 italic">{world.atmosphere}</p>
+      <div className="rounded-2xl ink-surface px-6 py-5 space-y-1.5">
+        <h3 className="text-[1.35rem] font-bold tracking-tight">{world.settingName}</h3>
+        <p className="text-[14px] leading-relaxed opacity-60 italic">{world.atmosphere}</p>
       </div>
 
-      {/* Fields grid */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      {/* Fields grid — 3 cols on wide, 1 on mobile */}
+      <div className="grid gap-5 sm:grid-cols-3">
         {fields.map(({ label, value }) => (
-          <div key={label} className="space-y-1.5">
+          <div key={label} className="space-y-2">
             <div className="section-label">{label}</div>
-            <p className="text-sm leading-relaxed text-foreground/80">{value}</p>
+            <p className="text-[14px] leading-relaxed text-foreground/80">{value}</p>
           </div>
         ))}
       </div>

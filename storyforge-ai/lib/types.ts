@@ -39,6 +39,11 @@ export interface PitchDeck {
   world: WorldBuilding;
   imagePrompts: string[];
   imageUrls: string[]; // base64 data URIs
+  actAudioUrls?: {      // base64 audio for three acts
+    act1?: string;
+    act2?: string;
+    act3?: string;
+  };
 }
 
 export type GenerationStep =
@@ -47,6 +52,7 @@ export type GenerationStep =
   | "characters"
   | "world"
   | "artPrompts"
+  | "audio"
   | "images"
   | "done"
   | "error";
@@ -57,11 +63,12 @@ export interface GenerationState {
 }
 
 export const GENERATION_STEPS: { key: GenerationStep; label: string }[] = [
-  { key: "story", label: "Writing story outline" },
-  { key: "characters", label: "Creating characters" },
-  { key: "world", label: "Building the world" },
-  { key: "artPrompts", label: "Crafting art prompts" },
-  { key: "images", label: "Generating concept art" },
+  { key: "story",      label: "Writing story outline" },
+  { key: "characters", label: "Creating characters"   },
+  { key: "world",      label: "Building the world"    },
+  { key: "artPrompts", label: "Crafting art prompts"  },
+  { key: "audio",      label: "Generating narration"  },
+  { key: "images",     label: "Generating concept art"},
 ];
 
 export const GENRES = [
