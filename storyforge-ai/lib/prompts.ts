@@ -161,42 +161,27 @@ export function artPromptGenerator(
   opts: StoryOptions
 ): string {
   const protagonist = characters[0];
+  return `Create 4 cinematic image prompts for this story. These will be used to generate concept art.
 
-  // Build context lines only for set options
-  const eraCtx   = opts.era  && opts.era  !== "Any" ? ` Era: ${opts.era}.`  : "";
-  const toneCtx  = opts.tone && opts.tone !== "Any" ? ` Mood: ${opts.tone}.` : "";
-  const genreCtx = opts.genre && opts.genre !== "None" ? ` Genre: ${opts.genre}.` : "";
+Story: "${story.title}" — ${story.logline}
+Setting: ${world.settingName} — ${world.atmosphere}
+Protagonist: ${protagonist.name} — ${protagonist.physicalDescription}
+Tone: ${story.tone}
 
-  return `Create 4 vivid image generation prompts for this story. These will be sent directly to an AI image model (Pollinations FLUX).
+The 4 images should be:
+1. An establishing scene — the world, a key moment, cinematic and wide
+2. The protagonist ${protagonist.name} — a character portrait
+3. The world/environment — a location or landscape from the story
+4. A mood/thematic image — abstract, emotional, symbolic
 
-Story context:
-- Title: "${story.title}"
-- Logline: ${story.logline}
-- Setting: ${world.settingName} — ${world.atmosphere}
-- Protagonist: ${protagonist.name} — ${protagonist.physicalDescription}
-- Story tone: ${story.tone}${toneCtx}${eraCtx}${genreCtx}
-- Theme: ${story.theme}
-- World geography: ${world.geography}
+Return ONLY this JSON (array of exactly 4 strings):
+[
+  "prompt for image 1 — establishing scene (detailed, cinematic, specific art style, lighting)",
+  "prompt for image 2 — character portrait of ${protagonist.name} (detailed physical description, setting, mood)",
+  "prompt for image 3 — environment/location from ${world.settingName} (architecture, landscape, atmosphere)",
+  "prompt for image 4 — thematic/mood image capturing '${story.theme}' (symbolic, atmospheric)"
+]
 
-Rules for every prompt:
-1. Start with the concrete subject and location (e.g. "A hooded figure stands at the edge of a shattered bridge over a glowing abyss")
-2. Name the lighting explicitly (e.g. "bathed in crimson twilight", "cold blue moonlight", "warm golden hour rays")
-3. State the color palette (e.g. "muted earth tones and deep shadows", "vivid teals and ambers")
-4. End with quality keywords: "hyperdetailed, cinematic composition, concept art"
-5. Each prompt must be ONE paragraph, 2-3 sentences max, no bullet points
-
-Image 1 — ESTABLISHING SCENE (will be rendered 16:9 widescreen):
-A wide cinematic shot of a key moment from the story's world. Show the scale of ${world.settingName}, the atmosphere, and a hint of the central conflict. No characters needed — focus on environment and mood.
-
-Image 2 — CHARACTER PORTRAIT of ${protagonist.name} (will be rendered 3:4 portrait):
-A dramatic close-up portrait. Use their exact physical description: ${protagonist.physicalDescription}. Convey their role (${characters[0].role}) and emotional state through lighting and expression.
-
-Image 3 — WORLD / ENVIRONMENT (will be rendered 16:9 widescreen):
-A location or landmark from ${world.settingName}. Focus on architecture, landscape, or the unique visual rules of this world: ${world.rulesOrSystem}. No characters.
-
-Image 4 — THEMATIC MOOD (will be rendered 1:1 square):
-An abstract or symbolic image embodying the story's central theme: "${story.theme}". Symbolic composition, impressionistic rather than literal. Emotional resonance over realism.
-
-Return ONLY a JSON array of exactly 4 strings — one prompt per image, in order:
-["image 1 prompt", "image 2 prompt", "image 3 prompt", "image 4 prompt"]`;
+Each prompt must be 2-4 sentences. Include: subject, setting, lighting style, color palette, and cinematic quality descriptors. Reference character names and setting names from the story.`;
+  void opts; // opts not used in art prompts — genre/tone handled by replicate.ts
 }

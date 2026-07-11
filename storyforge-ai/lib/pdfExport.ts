@@ -108,8 +108,12 @@ export async function exportToPDF(deck: PitchDeck): Promise<void> {
   pdf.setFontSize(8);
   pdf.setTextColor("#6b7280");
   pdf.setFont("helvetica", "normal");
-  pdf.text(`Theme: ${deck.story.theme}   ·   Tone: ${deck.story.tone}`, margin, y);
-  y += 5;
+  const themeLines = pdf.splitTextToSize(`Theme: ${deck.story.theme}`, contentW);
+  pdf.text(themeLines, margin, y);
+  y += themeLines.length * 4;
+  const toneLines = pdf.splitTextToSize(`Tone: ${deck.story.tone}`, contentW);
+  pdf.text(toneLines, margin, y);
+  y += toneLines.length * 4 + 1;
 
   hrule("#e5e7eb");
 
@@ -223,7 +227,7 @@ export async function exportToPDF(deck: PitchDeck): Promise<void> {
   if (deck.imageUrls.length > 0) {
     const captions = ["Establishing Scene", "Main Character", "World & Setting", "Thematic Mood"];
     const imgW = (contentW - 6) / 2;
-    const imgH = imgW;
+    const imgH = imgW; // square — matches 768×768 generated images
     const captionH = 5;
     const rowGap = 6;
     const totalGridH = imgH * 2 + captionH * 2 + rowGap + 12;
