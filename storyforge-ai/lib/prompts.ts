@@ -1,19 +1,74 @@
-import type { StoryOutline, Character, WorldBuilding } from "./types";
+import type { StoryOutline, Character, WorldBuilding, StoryOptions } from "./types";
 
-// System prompt sets the genre tone for all calls
-export function systemPrompt(genre: string): string {
-  const genreGuidance =
-    genre && genre !== "None"
-      ? `You are generating content for a ${genre} story. Every output should unmistakably feel like ${genre} — use genre-appropriate language, tropes, atmosphere, and stakes.`
-      : "You are generating content for a creative story. Match the tone and genre implied by the user's concept.";
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
-  return `You are a professional story development assistant and creative writing expert. ${genreGuidance}
-Be vivid, specific, and original. Avoid clichés. Return ONLY valid JSON — no markdown, no explanation, no code fences.`;
+/** Build a compact constraint string from only the options the user set. */
+function buildConstraints(opts: StoryOptions): string {
+  const lines: string[] = [];
+
+  if (opts.genre    && opts.genre    !== "None") lines.push(`Genre: ${opts.genre}`);
+  if (opts.tone     && opts.tone     !== "Any")  lines.push(`Tone / Mood: ${opts.tone}`);
+  if (opts.length   && opts.length   !== "Any")  lines.push(`Story Scope: ${opts.length}`);
+  if (opts.ending   && opts.ending   !== "Any")  lines.push(`Ending Type: ${opts.ending}`);
+  if (opts.audience && opts.audience !== "Any")  lines.push(`Target Audience: ${opts.audience}`);
+  if (opts.era      && opts.era      !== "Any")  lines.push(`Setting Era: ${opts.era}`);
+
+  return lines.length ? lines.join("\n") : "";
 }
 
-// Step 1: Story outline from user prompt
-export function storyPrompt(userInput: string, genre: string): string {
-  return `Create a compelling story concept based on this idea: "${userInput}"
+// ── System prompt ────────────────────────────────────────────────────────────
+
+export function systemPrompt(opts: StoryOptions): string {
+  const constraints = buildConstraints(opts);
+
+  const base = `You are a professional story development assistant and creative writing expert.`;
+
+  const genreGuidance = opts.genre && opts.genre !== "None"
+    ? `You are generating content for a ${opts.genre} story. Every output must unmistakably feel like ${opts.genre} — use genre-appropriate language, tropes, atmosphere, and stakes.`
+    : `You are generating content for a creative story. Match the tone and genre implied by the user's concept.`;
+
+  const toneGuidance = opts.tone && opts.tone !== "Any"
+    ? `The emotional register throughout must be "${opts.tone}" — this should permeate the language, pacing, character voices, and every descriptive choice.`
+    : "";
+
+  const lengthGuidance = opts.length && opts.length !== "Any"
+    ? `This is scoped as a "${opts.length}". Calibrate the scale of world-building, character depth, and act complexity accordingly.`
+    : "";
+
+  const audienceGuidance = opts.audience && opts.audience !== "Any"
+    ? `The content must be appropriate for: ${opts.audience}. Adjust vocabulary complexity, thematic depth, and content accordingly.`
+    : "";
+
+  const constraintBlock = constraints
+    ? `\n\nStory parameters to honour throughout ALL outputs:\n${constraints}`
+    : "";
+
+  return [base, genreGuidance, toneGuidance, lengthGuidance, audienceGuidance]
+    .filter(Boolean)
+    .join(" ")
+    + constraintBlock
+    + `\n\nBe vivid, specific, and original. Avoid clichés. Return ONLY valid JSON — no markdown, no explanation, no code fences.`;
+}
+
+// ── Step 1: Story outline ────────────────────────────────────────────────────
+
+export function storyPrompt(userInput: string, opts: StoryOptions): string {
+  const constraints = buildConstraints(opts);
+  const constraintBlock = constraints
+    ? `\n\nYou MUST respect these story parameters:\n${constraints}\n`
+    : "";
+
+  // Specific ending instruction injected directly into act3 guidance
+  const endingHint = opts.ending && opts.ending !== "Any"
+    ? ` The ending type is "${opts.ending}" — Act III must deliver this.`
+    : "";
+
+  // Era hint for setting/world flavour
+  const eraHint = opts.era && opts.era !== "Any"
+    ? ` The story is set in the "${opts.era}" era — reflect this in the world and language.`
+    : "";
+
+  return `Create a compelling story concept based on this idea: "${userInput}"${constraintBlock}${eraHint}
 
 Return ONLY this JSON (no extra text):
 {
@@ -23,20 +78,29 @@ Return ONLY this JSON (no extra text):
   "acts": {
     "act1": "Setup: who, where, what triggers the story (2-3 sentences)",
     "act2": "Conflict: the central struggle, complications, turning points (3-4 sentences)",
-    "act3": "Resolution: how it ends — satisfying but not predictable (2-3 sentences)"
+    "act3": "Resolution: how it ends — satisfying but not predictable (2-3 sentences).${endingHint}"
   },
   "theme": "The central question or truth this story explores (one sentence)",
-  "tone": "The emotional register — e.g. dark and suspenseful, whimsical and hopeful, gritty and intense"
+  "tone": "The emotional register — specific and vivid (e.g. dark and suspenseful, whimsical and hopeful)"
 }`;
 }
 
-// Step 2: Three characters — receives story context
-export function characterPrompt(story: StoryOutline): string {
+// ── Step 2: Characters ───────────────────────────────────────────────────────
+
+export function characterPrompt(story: StoryOutline, opts: StoryOptions): string {
+  const scopeNote = opts.length && opts.length !== "Any"
+    ? `\nScope: ${opts.length} — calibrate character complexity to suit.`
+    : "";
+  const audienceNote = opts.audience && opts.audience !== "Any"
+    ? `\nAudience: ${opts.audience} — keep content appropriate.`
+    : "";
+
   return `Based on this story, create 3 compelling characters:
 
 Story: "${story.title}" — ${story.logline}
 Premise: ${story.premise}
 Theme: ${story.theme}
+Tone: ${story.tone}${scopeNote}${audienceNote}
 
 Return ONLY this JSON (an array of exactly 3 characters):
 [
@@ -52,46 +116,60 @@ Return ONLY this JSON (an array of exactly 3 characters):
 ]`;
 }
 
-// Step 3: World-building — receives story + characters
+// ── Step 3: World-building ───────────────────────────────────────────────────
+
 export function worldPrompt(
   story: StoryOutline,
-  characters: Character[]
+  characters: Character[],
+  opts: StoryOptions
 ): string {
   const charNames = characters.map((c) => c.name).join(", ");
+  const eraNote = opts.era && opts.era !== "Any"
+    ? `\nEra: ${opts.era}` : "";
+  const toneNote = opts.tone && opts.tone !== "Any"
+    ? `\nMood: ${opts.tone}` : "";
+
   return `Build the world for this story:
 
 Story: "${story.title}" — ${story.logline}
 Characters: ${charNames}
-Tone: ${story.tone}
+Tone: ${story.tone}${eraNote}${toneNote}
 
 Return ONLY this JSON:
 {
   "settingName": "The name of this world, city, era, or realm",
   "geography": "2-3 sentences: the physical environment — landscape, climate, architecture, sensory details",
-  "rulesOrSystem": "2-3 sentences: what makes this world unique — its magic system, technology, political structure, or physical laws that don't exist in our world",
+  "rulesOrSystem": "2-3 sentences: what makes this world unique — its magic system, technology, political structure, or physical laws",
   "culturalFlavor": "2-3 sentences: the culture, society, customs, values — what daily life feels like here",
   "atmosphere": "One sentence capturing the dominant mood and feel of this world"
 }`;
 }
 
-// Step 4: Art prompts — receives full story context
+// ── Step 4: Art prompts ──────────────────────────────────────────────────────
+
 export function artPromptGenerator(
   story: StoryOutline,
   characters: Character[],
-  world: WorldBuilding
+  world: WorldBuilding,
+  opts: StoryOptions
 ): string {
   const protagonist = characters[0];
+  const toneNote = opts.tone && opts.tone !== "Any"
+    ? ` The overall visual mood should be "${opts.tone}".` : "";
+  const eraNote = opts.era && opts.era !== "Any"
+    ? ` The era is "${opts.era}" — reflect this in architecture, clothing, and technology.` : "";
+
   return `Create 4 cinematic image prompts for this story. These will be used to generate concept art.
 
 Story: "${story.title}" — ${story.logline}
 Setting: ${world.settingName} — ${world.atmosphere}
 Protagonist: ${protagonist.name} — ${protagonist.physicalDescription}
-Tone: ${story.tone}
+Tone: ${story.tone}${toneNote}${eraNote}
 
 The 4 images should be:
 1. An establishing scene — the world, a key moment, cinematic and wide
 2. The protagonist ${protagonist.name} — a character portrait
-3. The world/environment — a location or landscape from the story  
+3. The world/environment — a location or landscape from the story
 4. A mood/thematic image — abstract, emotional, symbolic
 
 Return ONLY this JSON (array of exactly 4 strings):

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,16 +10,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { GENRES } from "@/lib/types";
-import type { Genre } from "@/lib/types";
-import { Sparkles } from "lucide-react";
+import {
+  GENRES,
+  TONES,
+  LENGTHS,
+  ENDINGS,
+  AUDIENCES,
+  ERAS,
+} from "@/lib/types";
+import type { StoryOptions } from "@/lib/types";
+import { Sparkles, ChevronDown, ChevronUp, SlidersHorizontal } from "lucide-react";
 
 interface PromptInputProps {
   value: string;
-  genre: Genre;
+  options: StoryOptions;
   isLoading: boolean;
   onChange: (value: string) => void;
-  onGenreChange: (genre: Genre) => void;
+  onOptionsChange: (patch: Partial<StoryOptions>) => void;
   onSubmit: () => void;
 }
 
@@ -29,20 +37,36 @@ const EXAMPLES = [
   "The last librarian in a world that forgot how to read",
 ];
 
+// Shared select styling
+const triggerCls = "h-9 text-sm border-border/50 bg-transparent";
+
+// Small helper: how many advanced options are non-default
+function countAdvanced(opts: StoryOptions): number {
+  let n = 0;
+  if (opts.audience && opts.audience !== "Any") n++;
+  if (opts.era      && opts.era      !== "Any") n++;
+  return n;
+}
+
 export function PromptInput({
   value,
-  genre,
+  options,
   isLoading,
   onChange,
-  onGenreChange,
+  onOptionsChange,
   onSubmit,
 }: PromptInputProps) {
+  const [advOpen, setAdvOpen] = useState(false);
+
   const handleKey = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) onSubmit();
   };
 
+  const advCount = countAdvanced(options);
+
   return (
     <div className="space-y-3">
+      {/* Textarea */}
       <Textarea
         placeholder="Describe your story concept…"
         value={value}
@@ -60,7 +84,7 @@ export function PromptInput({
             <button
               key={ex}
               onClick={() => onChange(ex)}
-              className="text-xs text-muted-foreground/60 border border-border/40 rounded-full px-2.5 py-1 hover:border-primary/40 hover:text-foreground/80 transition-colors truncate max-w-[220px]"
+              className="text-xs text-muted-foreground/60 border border-border/40 rounded-full px-2.5 py-1 hover:border-primary/40 hover:text-foreground/80 transition-colors truncate max-w-[240px]"
             >
               {ex}
             </button>
@@ -68,13 +92,15 @@ export function PromptInput({
         </div>
       )}
 
-      <div className="flex gap-2.5 items-center">
+      {/* ── Tier 1 row: Genre · Tone · Length · Ending ──────────────────── */}
+      <div className="flex flex-wrap gap-2 items-center">
+        {/* Genre */}
         <Select
-          value={genre}
-          onValueChange={(v) => onGenreChange(v as Genre)}
+          value={options.genre}
+          onValueChange={(v) => onOptionsChange({ genre: v as StoryOptions["genre"] })}
           disabled={isLoading}
         >
-          <SelectTrigger className="w-[140px] h-9 text-sm border-border/50">
+          <SelectTrigger className={`w-[130px] ${triggerCls}`}>
             <SelectValue placeholder="Genre" />
           </SelectTrigger>
           <SelectContent>
@@ -85,18 +111,162 @@ export function PromptInput({
           </SelectContent>
         </Select>
 
+        {/* Tone */}
+        <Select
+          value={options.tone}
+          onValueChange={(v) => onOptionsChange({ tone: v as StoryOptions["tone"] })}
+          disabled={isLoading}
+        >
+          <SelectTrigger className={`w-[170px] ${triggerCls}`}>
+            <SelectValue placeholder="Tone" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Any">Any tone</SelectItem>
+            {TONES.map((t) => (
+              <SelectItem key={t} value={t}>{t}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Length */}
+        <Select
+          value={options.length}
+          onValueChange={(v) => onOptionsChange({ length: v as StoryOptions["length"] })}
+          disabled={isLoading}
+        >
+          <SelectTrigger className={`w-[150px] ${triggerCls}`}>
+            <SelectValue placeholder="Scope" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Any">Any scope</SelectItem>
+            {LENGTHS.map((l) => (
+              <SelectItem key={l} value={l}>{l}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Ending */}
+        <Select
+          value={options.ending}
+          onValueChange={(v) => onOptionsChange({ ending: v as StoryOptions["ending"] })}
+          disabled={isLoading}
+        >
+          <SelectTrigger className={`w-[160px] ${triggerCls}`}>
+            <SelectValue placeholder="Ending" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Any">Any ending</SelectItem>
+            {ENDINGS.map((e) => (
+              <SelectItem key={e} value={e}>{e}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Advanced toggle */}
+        <button
+          type="button"
+          onClick={() => setAdvOpen((o) => !o)}
+          disabled={isLoading}
+          className={[
+            "flex items-center gap-1.5 h-9 px-3 rounded-md border text-sm transition-colors select-none",
+            advOpen
+              ? "border-primary/40 text-primary bg-primary/5"
+              : advCount > 0
+              ? "border-primary/30 text-primary/80 bg-primary/5"
+              : "border-border/40 text-muted-foreground/60 hover:border-border hover:text-foreground/70",
+          ].join(" ")}
+        >
+          <SlidersHorizontal className="w-3.5 h-3.5" />
+          <span>Advanced</span>
+          {advCount > 0 && (
+            <span className="w-4 h-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center leading-none">
+              {advCount}
+            </span>
+          )}
+          {advOpen
+            ? <ChevronUp className="w-3 h-3 opacity-50" />
+            : <ChevronDown className="w-3 h-3 opacity-50" />
+          }
+        </button>
+      </div>
+
+      {/* ── Tier 2: Advanced panel ───────────────────────────────────────── */}
+      {advOpen && (
+        <div className="rounded-xl border border-border/40 bg-muted/20 px-4 py-3.5 space-y-3 animate-in fade-in slide-in-from-top-1 duration-150">
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+            Advanced Options
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {/* Audience */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] text-muted-foreground/60 font-medium pl-0.5">
+                Audience
+              </label>
+              <Select
+                value={options.audience}
+                onValueChange={(v) => onOptionsChange({ audience: v as StoryOptions["audience"] })}
+                disabled={isLoading}
+              >
+                <SelectTrigger className={`w-[175px] ${triggerCls}`}>
+                  <SelectValue placeholder="Audience" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Any">Any audience</SelectItem>
+                  {AUDIENCES.map((a) => (
+                    <SelectItem key={a} value={a}>{a}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Era */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] text-muted-foreground/60 font-medium pl-0.5">
+                Setting Era
+              </label>
+              <Select
+                value={options.era}
+                onValueChange={(v) => onOptionsChange({ era: v as StoryOptions["era"] })}
+                disabled={isLoading}
+              >
+                <SelectTrigger className={`w-[210px] ${triggerCls}`}>
+                  <SelectValue placeholder="Era" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Any">Any era</SelectItem>
+                  {ERAS.map((e) => (
+                    <SelectItem key={e} value={e}>{e}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Reset advanced */}
+          {advCount > 0 && (
+            <button
+              type="button"
+              onClick={() => onOptionsChange({ audience: "Any", era: "Any" })}
+              disabled={isLoading}
+              className="text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors underline underline-offset-2"
+            >
+              Reset advanced options
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ── Submit row ──────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-2.5 pt-0.5">
         <Button
           onClick={onSubmit}
           disabled={isLoading || !value.trim()}
-          className="flex-1 sm:flex-none gap-2 font-semibold h-9 px-5 bg-primary text-primary-foreground hover:bg-primary/90"
+          className="flex-1 sm:flex-none gap-2 font-semibold h-9 px-6 bg-primary text-primary-foreground hover:bg-primary/90"
         >
           <Sparkles className="w-3.5 h-3.5" />
           {isLoading ? "Generating…" : "Generate Pitch Deck"}
         </Button>
-
-        <span className="text-xs text-muted-foreground/40 hidden sm:block select-none">
-          ⌘↵
-        </span>
+        <span className="text-xs text-muted-foreground/40 hidden sm:block select-none">⌘↵</span>
       </div>
     </div>
   );

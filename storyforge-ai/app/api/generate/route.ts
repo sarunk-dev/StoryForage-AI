@@ -7,14 +7,19 @@ import {
   worldPrompt,
   artPromptGenerator,
 } from "@/lib/prompts";
-import type { StoryOutline, Character, WorldBuilding } from "@/lib/types";
+import type { StoryOutline, Character, WorldBuilding, StoryOptions } from "@/lib/types";
+import { DEFAULT_OPTIONS } from "@/lib/types";
 
 export async function POST(req: NextRequest) {
   try {
-    const { prompt, genre } = (await req.json()) as {
+    const body = (await req.json()) as {
       prompt: string;
-      genre: string;
+      options?: Partial<StoryOptions>;
     };
+
+    const { prompt } = body;
+    // Merge user options over defaults — any unset field falls back to "Any"/"None"
+    const opts: StoryOptions = { ...DEFAULT_OPTIONS, ...(body.options ?? {}) };
 
     if (!prompt?.trim()) {
       return NextResponse.json(
@@ -23,32 +28,32 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const sys = systemPrompt(genre);
+    const sys = systemPrompt(opts);
 
     // Step 1: Story outline
     const story = await generateJSON<StoryOutline>(
-      storyPrompt(prompt.trim(), genre),
+      storyPrompt(prompt.trim(), opts),
       sys,
       { maxTokens: 1024 }
     );
 
-    // Step 2: Characters (receives story context)
+    // Step 2: Characters (receives story + options context)
     const characters = await generateJSON<Character[]>(
-      characterPrompt(story),
+      characterPrompt(story, opts),
       sys,
       { maxTokens: 2048 }
     );
 
-    // Step 3: World-building (receives story + characters)
+    // Step 3: World-building (receives story + characters + options)
     const world = await generateJSON<WorldBuilding>(
-      worldPrompt(story, characters),
+      worldPrompt(story, characters, opts),
       sys,
       { maxTokens: 1024 }
     );
 
     // Step 4: Art prompts (receives all context)
     const imagePrompts = await generateJSON<string[]>(
-      artPromptGenerator(story, characters, world),
+      artPromptGenerator(story, characters, world, opts),
       sys,
       { maxTokens: 1024 }
     );

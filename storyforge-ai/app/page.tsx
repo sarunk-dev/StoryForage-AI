@@ -9,28 +9,27 @@ import { WorldSection } from "@/components/WorldSection";
 import { ArtGrid } from "@/components/ArtGrid";
 import { ExportButton } from "@/components/ExportButton";
 import { Separator } from "@/components/ui/separator";
-import type { PitchDeck, GenerationStep, Genre } from "@/lib/types";
+import type { PitchDeck, GenerationStep, StoryOptions } from "@/lib/types";
+import { DEFAULT_OPTIONS } from "@/lib/types";
 import { AlertCircle, Flame, Moon, Sun } from "lucide-react";
 
-// Small helper: resolves after `ms` milliseconds
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export default function Home() {
   const [prompt, setPrompt] = useState("");
-  const [genre, setGenre] = useState<Genre>("None");
+  const [options, setOptions] = useState<StoryOptions>(DEFAULT_OPTIONS);
   const [step, setStep] = useState<GenerationStep>("idle");
   const [error, setError] = useState<string | null>(null);
   const [deck, setDeck] = useState<Partial<PitchDeck> | null>(null);
   const [dark, setDark] = useState(false);
 
+  // Patch a subset of options without replacing the whole object
+  const patchOptions = (patch: Partial<StoryOptions>) =>
+    setOptions((prev) => ({ ...prev, ...patch }));
+
   // Apply / remove dark class on <html>
   useEffect(() => {
-    const root = document.documentElement;
-    if (dark) {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-    }
+    document.documentElement.classList.toggle("dark", dark);
   }, [dark]);
 
   const handleGenerate = async () => {
@@ -40,11 +39,11 @@ export default function Home() {
     setDeck(null);
 
     try {
-      // ── Text generation ──────────────────────────────────────────────
+      // ── Text generation ──────────────────────────────────────────────────
       const textRes = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt.trim(), genre }),
+        body: JSON.stringify({ prompt: prompt.trim(), options }),
       });
       if (!textRes.ok) {
         const errData = await textRes.json().catch(() => ({}));
@@ -52,20 +51,14 @@ export default function Home() {
       }
       const { story, characters, world, imagePrompts } = await textRes.json();
 
-      // ── Visual micro-delays for intermediate steps ────────────────────
-      // "characters" step
-      setStep("characters");
-      await sleep(900);
-      // "world" step
-      setStep("world");
-      await sleep(900);
-      // "artPrompts" step
-      setStep("artPrompts");
-      await sleep(900);
+      // ── Visual micro-delays for intermediate steps ───────────────────────
+      setStep("characters"); await sleep(900);
+      setStep("world");      await sleep(900);
+      setStep("artPrompts"); await sleep(900);
 
-      setDeck({ prompt, genre, story, characters, world, imagePrompts, imageUrls: [] });
+      setDeck({ prompt, genre: options.genre, story, characters, world, imagePrompts, imageUrls: [] });
 
-      // ── Audio narration (sequential — avoids ElevenLabs rate-limit) ──
+      // ── Audio narration (sequential — avoids ElevenLabs rate-limit) ─────
       setStep("audio");
 
       const narrateAct = async (
@@ -76,7 +69,7 @@ export default function Home() {
           const res = await fetch("/api/narrate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text, genre, actKey, tone: story.tone }),
+            body: JSON.stringify({ text, genre: options.genre, actKey, tone: story.tone }),
           });
           if (!res.ok) return undefined;
           const { audioBase64 } = await res.json();
@@ -96,9 +89,9 @@ export default function Home() {
         ...(act3Audio ? { act3: act3Audio } : {}),
       };
 
-      setDeck({ prompt, genre, story, characters, world, imagePrompts, imageUrls: [], actAudioUrls });
+      setDeck({ prompt, genre: options.genre, story, characters, world, imagePrompts, imageUrls: [], actAudioUrls });
 
-      // ── Image generation ──────────────────────────────────────────────
+      // ── Image generation ─────────────────────────────────────────────────
       setStep("images");
 
       const imgRes = await fetch("/api/images", {
@@ -120,10 +113,20 @@ export default function Home() {
   };
 
   const isLoading = step !== "idle" && step !== "done" && step !== "error";
-  const isDone = step === "done";
-  const hasText = deck?.story && deck?.characters && deck?.world;
+  const isDone    = step === "done";
+  const hasText   = deck?.story && deck?.characters && deck?.world;
   const hasImages = (deck?.imageUrls?.length ?? 0) > 0;
-  const showHero = step === "idle";
+  const showHero  = step === "idle";
+
+  // Collect active option badges to show below section header
+  const activeBadges = [
+    options.genre    !== "None" ? options.genre    : null,
+    options.tone     !== "Any"  ? options.tone     : null,
+    options.length   !== "Any"  ? options.length   : null,
+    options.ending   !== "Any"  ? options.ending   : null,
+    options.audience !== "Any"  ? options.audience : null,
+    options.era      !== "Any"  ? options.era      : null,
+  ].filter(Boolean) as string[];
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -138,7 +141,6 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Dark mode toggle */}
             <button
               onClick={() => setDark((d) => !d)}
               aria-label="Toggle dark mode"
@@ -146,7 +148,6 @@ export default function Home() {
             >
               {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
-
             {isDone && deck && hasText && hasImages && (
               <ExportButton deck={deck as PitchDeck} />
             )}
@@ -173,14 +174,14 @@ export default function Home() {
         )}
 
         {/* ── Prompt input ──────────────────────────────────────────────── */}
-        <div className={`${showHero ? "pb-10 max-w-2xl mx-auto" : "pt-6 pb-8 max-w-2xl mx-auto"}`}>
+        <div className={showHero ? "pb-10 max-w-2xl mx-auto" : "pt-6 pb-8 max-w-2xl mx-auto"}>
           <div className="rounded-2xl border border-border/60 bg-card p-5 glow-amber transition-shadow">
             <PromptInput
               value={prompt}
-              genre={genre}
+              options={options}
               isLoading={isLoading}
               onChange={setPrompt}
-              onGenreChange={setGenre}
+              onOptionsChange={patchOptions}
               onSubmit={handleGenerate}
             />
           </div>
@@ -188,7 +189,7 @@ export default function Home() {
 
         {/* ── Loading pipeline ──────────────────────────────────────────── */}
         {isLoading && (
-          <div className="rounded-xl border border-border/40 bg-muted/20 px-5 mb-8">
+          <div className="rounded-xl border border-border/40 bg-muted/20 px-5 mb-8 max-w-2xl mx-auto">
             <LoadingPipeline currentStep={step} />
           </div>
         )}
@@ -207,9 +208,23 @@ export default function Home() {
         {/* ── Results ───────────────────────────────────────────────────── */}
         {hasText && deck && (
           <div className="space-y-10">
+            {/* Active options badges — shown once at the top of results */}
+            {activeBadges.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 -mb-4">
+                {activeBadges.map((badge) => (
+                  <span
+                    key={badge}
+                    className="text-[11px] font-medium border border-primary/25 text-primary/80 bg-primary/5 rounded-full px-2.5 py-0.5"
+                  >
+                    {badge}
+                  </span>
+                ))}
+              </div>
+            )}
+
             <StorySection
               story={deck.story!}
-              genre={genre}
+              genre={options.genre}
               actAudioUrls={deck.actAudioUrls}
             />
             <Separator />
