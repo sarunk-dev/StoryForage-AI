@@ -51,6 +51,8 @@ const ERA_LABEL     = (v: string) => v === "Any"  ? "Any era"      : v;
 // Small helper: how many advanced options are non-default
 function countAdvanced(opts: StoryOptions): number {
   let n = 0;
+  if (opts.tone     && opts.tone     !== "Any") n++;
+  if (opts.ending   && opts.ending   !== "Any") n++;
   if (opts.audience && opts.audience !== "Any") n++;
   if (opts.era      && opts.era      !== "Any") n++;
   return n;
@@ -100,7 +102,7 @@ export function PromptInput({
         </div>
       )}
 
-      {/* ── Row 1: Genre · Tone ──────────────────────────────────────────── */}
+      {/* ── Single row: Genre · Scope · Advanced ─────────────────────────── */}
       <div className="flex flex-wrap gap-2 items-center">
         {/* Genre */}
         <Select
@@ -119,26 +121,6 @@ export function PromptInput({
           </SelectContent>
         </Select>
 
-        {/* Tone */}
-        <Select
-          value={options.tone}
-          onValueChange={(v) => onOptionsChange({ tone: v as StoryOptions["tone"] })}
-          disabled={isLoading}
-        >
-          <SelectTrigger className={`w-[185px] ${triggerCls}`}>
-            <span className="truncate">{TONE_LABEL(options.tone)}</span>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Any">Any tone</SelectItem>
-            {TONES.map((t) => (
-              <SelectItem key={t} value={t}>{t}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* ── Row 2: Scope · Ending · Advanced ────────────────────────────── */}
-      <div className="flex flex-wrap gap-2 items-center">
         {/* Scope */}
         <Select
           value={options.length}
@@ -152,23 +134,6 @@ export function PromptInput({
             <SelectItem value="Any">Any scope</SelectItem>
             {LENGTHS.map((l) => (
               <SelectItem key={l} value={l}>{l}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Ending — right next to Scope */}
-        <Select
-          value={options.ending}
-          onValueChange={(v) => onOptionsChange({ ending: v as StoryOptions["ending"] })}
-          disabled={isLoading}
-        >
-          <SelectTrigger className={`w-[155px] ${triggerCls}`}>
-            <span className="truncate">{ENDING_LABEL(options.ending)}</span>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Any">Any ending</SelectItem>
-            {ENDINGS.map((e) => (
-              <SelectItem key={e} value={e}>{e}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -201,18 +166,56 @@ export function PromptInput({
         </button>
       </div>
 
-      {/* ── Tier 2: Advanced panel ───────────────────────────────────────── */}
+      {/* ── Advanced panel: Tone · Ending · Audience · Era ──────────────── */}
       {advOpen && (
         <div className="rounded-xl border border-border/40 bg-muted/20 px-4 py-3.5 space-y-3 animate-in fade-in slide-in-from-top-1 duration-150">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/60">
             Advanced Options
           </p>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-x-3 gap-y-3">
+            {/* Tone */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] text-muted-foreground/60 font-medium pl-0.5">Tone</label>
+              <Select
+                value={options.tone}
+                onValueChange={(v) => onOptionsChange({ tone: v as StoryOptions["tone"] })}
+                disabled={isLoading}
+              >
+                <SelectTrigger className={`w-[185px] ${triggerCls}`}>
+                  <span className="truncate">{TONE_LABEL(options.tone)}</span>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Any">Any tone</SelectItem>
+                  {TONES.map((t) => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Ending */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] text-muted-foreground/60 font-medium pl-0.5">Ending</label>
+              <Select
+                value={options.ending}
+                onValueChange={(v) => onOptionsChange({ ending: v as StoryOptions["ending"] })}
+                disabled={isLoading}
+              >
+                <SelectTrigger className={`w-[160px] ${triggerCls}`}>
+                  <span className="truncate">{ENDING_LABEL(options.ending)}</span>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Any">Any ending</SelectItem>
+                  {ENDINGS.map((e) => (
+                    <SelectItem key={e} value={e}>{e}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Audience */}
             <div className="space-y-1.5">
-              <label className="text-[11px] text-muted-foreground/60 font-medium pl-0.5">
-                Audience
-              </label>
+              <label className="text-[11px] text-muted-foreground/60 font-medium pl-0.5">Audience</label>
               <Select
                 value={options.audience}
                 onValueChange={(v) => onOptionsChange({ audience: v as StoryOptions["audience"] })}
@@ -232,15 +235,13 @@ export function PromptInput({
 
             {/* Era */}
             <div className="space-y-1.5">
-              <label className="text-[11px] text-muted-foreground/60 font-medium pl-0.5">
-                Setting Era
-              </label>
+              <label className="text-[11px] text-muted-foreground/60 font-medium pl-0.5">Setting Era</label>
               <Select
                 value={options.era}
                 onValueChange={(v) => onOptionsChange({ era: v as StoryOptions["era"] })}
                 disabled={isLoading}
               >
-                <SelectTrigger className={`w-[210px] ${triggerCls}`}>
+                <SelectTrigger className={`w-[200px] ${triggerCls}`}>
                   <span className="truncate">{ERA_LABEL(options.era)}</span>
                 </SelectTrigger>
                 <SelectContent>
@@ -253,11 +254,11 @@ export function PromptInput({
             </div>
           </div>
 
-          {/* Reset advanced */}
+          {/* Reset all advanced */}
           {advCount > 0 && (
             <button
               type="button"
-              onClick={() => onOptionsChange({ audience: "Any", era: "Any" })}
+              onClick={() => onOptionsChange({ tone: "Any", ending: "Any", audience: "Any", era: "Any" })}
               disabled={isLoading}
               className="text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors underline underline-offset-2"
             >

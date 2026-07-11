@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
+// Allow up to 30 s for this route — ElevenLabs TTS can take 5–10 s
+export const maxDuration = 30;
+
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY!;
 
 // ── Model ────────────────────────────────────────────────────────────────────
@@ -144,7 +147,7 @@ export async function POST(req: NextRequest) {
     const { text, genre, actKey, tone } = (await req.json()) as {
       text: string;
       genre?: string;
-      actKey?: string;   // "act1" | "act2" | "act3"
+      actKey?: string;
       tone?: string;
     };
 
@@ -156,54 +159,67 @@ export async function POST(req: NextRequest) {
     const resolvedAct   = actKey ?? "act1";
     const resolvedTone  = tone ?? "";
 
-    // Pick profile — fallback to None
     const profile = GENRE_PROFILES[resolvedGenre] ?? GENRE_PROFILES["None"];
     const voice   = VOICES[profile.voiceKey] ?? VOICES["daniel"];
 
-    // Blend base settings with per-act overlay
-    const actOverlay = ACT_OVERLAYS[resolvedAct] ?? {};
+    const actOverlay    = ACT_OVERLAYS[resolvedAct] ?? {};
     const finalSettings = blendSettings(profile.settings, actOverlay);
 
-    // Pre-process text for natural delivery
-    const actLabelMap: Record<string, string> = { act1: "act1", act2: "act2", act3: "act3" };
-    const narrationText = prepareNarrationText(
-      text,
-      actLabelMap[resolvedAct] ?? "act1",
-      resolvedTone
-    );
+    const narrationText = prepareNarrationText(text, resolvedAct, resolvedTone);
 
-    const ttsRes = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voice.id}`,
-      {
-        method: "POST",
-        headers: {
-          "xi-api-key": ELEVENLABS_API_KEY,
-          "Content-Type": "application/json",
-          // Request MP3 at 128kbps — good quality, reasonable size
-          "Accept": "audio/mpeg",
-        },
-        body: JSON.stringify({
-          text: narrationText,
-          model_id: MODEL_ID,
-          voice_settings: {
-            stability:        finalSettings.stability,
-            similarity_boost: finalSettings.similarity_boost,
-            style:            finalSettings.style,
-            use_speaker_boost: finalSettings.use_speaker_boost,
-          },
-        }),
+    // Retry up to 3 times with back-off — handles ElevenLabs 429 rate-limits
+    let lastErr = "";
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) {
+        const wait = attempt === 1 ? 4000 : 8000; // 4 s, then 8 s
+        console.warn(`[narrate] ${actKey} retry ${attempt} after ${wait}ms`);
+        await new Promise((r) => setTimeout(r, wait));
       }
-    );
 
-    if (!ttsRes.ok) {
-      const errText = await ttsRes.text();
-      throw new Error(`ElevenLabs TTS error ${ttsRes.status}: ${errText}`);
+      const ttsRes = await fetch(
+        `https://api.elevenlabs.io/v1/text-to-speech/${voice.id}`,
+        {
+          method: "POST",
+          headers: {
+            "xi-api-key": ELEVENLABS_API_KEY,
+            "Content-Type": "application/json",
+            "Accept": "audio/mpeg",
+          },
+          body: JSON.stringify({
+            text: narrationText,
+            model_id: MODEL_ID,
+            voice_settings: {
+              stability:         finalSettings.stability,
+              similarity_boost:  finalSettings.similarity_boost,
+              style:             finalSettings.style,
+              use_speaker_boost: finalSettings.use_speaker_boost,
+            },
+          }),
+        }
+      );
+
+      if (ttsRes.status === 429) {
+        lastErr = `429 rate-limited on attempt ${attempt + 1}`;
+        continue; // wait and retry
+      }
+
+      if (!ttsRes.ok) {
+        const errText = await ttsRes.text();
+        lastErr = `ElevenLabs ${ttsRes.status}: ${errText}`;
+        continue;
+      }
+
+      const audioBuffer = await ttsRes.arrayBuffer();
+      if (audioBuffer.byteLength === 0) {
+        lastErr = "Empty audio buffer returned";
+        continue;
+      }
+
+      const base64Audio = Buffer.from(audioBuffer).toString("base64");
+      return NextResponse.json({ audioBase64: base64Audio });
     }
 
-    const audioBuffer = await ttsRes.arrayBuffer();
-    const base64Audio = Buffer.from(audioBuffer).toString("base64");
-
-    return NextResponse.json({ audioBase64: base64Audio });
+    throw new Error(`[narrate] All attempts failed for ${actKey}: ${lastErr}`);
   } catch (error) {
     console.error("[/api/narrate] error:", error);
     return NextResponse.json(
