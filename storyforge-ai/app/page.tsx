@@ -68,12 +68,15 @@ export default function Home() {
       // ── Audio narration (sequential — avoids ElevenLabs rate-limit) ──
       setStep("audio");
 
-      const narrateAct = async (text: string): Promise<string | undefined> => {
+      const narrateAct = async (
+        text: string,
+        actKey: "act1" | "act2" | "act3"
+      ): Promise<string | undefined> => {
         try {
           const res = await fetch("/api/narrate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text, genre }),
+            body: JSON.stringify({ text, genre, actKey, tone: story.tone }),
           });
           if (!res.ok) return undefined;
           const { audioBase64 } = await res.json();
@@ -83,9 +86,9 @@ export default function Home() {
         }
       };
 
-      const act1Audio = await narrateAct(story.acts.act1);
-      const act2Audio = await narrateAct(story.acts.act2);
-      const act3Audio = await narrateAct(story.acts.act3);
+      const act1Audio = await narrateAct(story.acts.act1, "act1");
+      const act2Audio = await narrateAct(story.acts.act2, "act2");
+      const act3Audio = await narrateAct(story.acts.act3, "act3");
 
       const actAudioUrls: { act1?: string; act2?: string; act3?: string } = {
         ...(act1Audio ? { act1: act1Audio } : {}),
