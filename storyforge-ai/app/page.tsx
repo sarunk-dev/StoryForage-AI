@@ -58,29 +58,41 @@ export default function Home() {
 
       setDeck({ prompt, genre: options.genre, story, characters, world, imagePrompts, imageUrls: [] });
 
-      // ── Audio narration (sequential — avoids ElevenLabs rate-limit) ─────
+      // ── Audio narration (sequential + gap — avoids ElevenLabs rate-limit) ─
       setStep("audio");
 
+      // Single narration call with one automatic retry on failure (rate-limit)
       const narrateAct = async (
         text: string,
         actKey: "act1" | "act2" | "act3"
       ): Promise<string | undefined> => {
-        try {
-          const res = await fetch("/api/narrate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text, genre: options.genre, actKey, tone: story.tone }),
-          });
-          if (!res.ok) return undefined;
-          const { audioBase64 } = await res.json();
-          return audioBase64 as string;
-        } catch {
-          return undefined;
+        const body = JSON.stringify({ text, genre: options.genre, actKey, tone: story.tone });
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            if (attempt > 0) await sleep(3000); // 3 s back-off on retry
+            const res = await fetch("/api/narrate", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body,
+            });
+            if (!res.ok) {
+              console.warn(`[narrate] ${actKey} attempt ${attempt + 1} failed: ${res.status}`);
+              continue; // retry
+            }
+            const { audioBase64 } = await res.json();
+            if (audioBase64) return audioBase64 as string;
+          } catch (e) {
+            console.warn(`[narrate] ${actKey} attempt ${attempt + 1} threw:`, e);
+          }
         }
+        return undefined;
       };
 
+      // 500 ms gap between calls keeps well under ElevenLabs concurrent limit
       const act1Audio = await narrateAct(story.acts.act1, "act1");
+      await sleep(500);
       const act2Audio = await narrateAct(story.acts.act2, "act2");
+      await sleep(500);
       const act3Audio = await narrateAct(story.acts.act3, "act3");
 
       const actAudioUrls: { act1?: string; act2?: string; act3?: string } = {

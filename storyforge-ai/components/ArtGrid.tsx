@@ -15,20 +15,12 @@ const IMAGE_LABELS = [
   "Thematic Mood",
 ];
 
-// Aspect ratio per slot matches SLOT_DIMENSIONS in replicate.ts
-// slot 0 → 16:9, slot 1 → 3:4 portrait, slot 2 → 16:9, slot 3 → 1:1
-const SLOT_ASPECT = [
-  "aspect-video",      // 16:9
-  "aspect-[3/4]",      // 3:4 portrait
-  "aspect-video",      // 16:9
-  "aspect-square",     // 1:1
-];
+const STAGGER = ["delay-0", "delay-75", "delay-150", "delay-300"];
 
 function ImageSkeleton({ label, index }: { label: string; index: number }) {
-  const delays = ["delay-0", "delay-75", "delay-150", "delay-300"];
   return (
     <div
-      className={`${SLOT_ASPECT[index]} rounded-xl border border-border/30 bg-muted/40 animate-pulse flex items-end p-3 ${delays[index]}`}
+      className={`aspect-square rounded-xl border border-border/30 bg-muted/40 animate-pulse flex items-end p-3 ${STAGGER[index]}`}
     >
       <span className="text-[10px] text-muted-foreground/30 font-medium">{label}</span>
     </div>
@@ -36,10 +28,6 @@ function ImageSkeleton({ label, index }: { label: string; index: number }) {
 }
 
 export function ArtGrid({ imageUrls, isLoading }: ArtGridProps) {
-  // Layout:
-  //   Slot 0 (16:9 wide)   — full width, top
-  //   Slots 1+2 (portrait / wide) — side by side
-  //   Slot 3 (1:1)         — full width, bottom
   return (
     <section className="space-y-5">
       <div className="flex items-center gap-2 section-label">
@@ -47,18 +35,42 @@ export function ArtGrid({ imageUrls, isLoading }: ArtGridProps) {
         Concept Art
       </div>
 
-      <div className="space-y-3">
-        {/* Row 1 — Slot 0: full-width establishing scene */}
-        <SlotCell index={0} imageUrls={imageUrls} isLoading={isLoading} />
+      {/* Uniform 2×2 square grid — consistent, stable layout */}
+      <div className="grid grid-cols-2 gap-3">
+        {IMAGE_LABELS.map((label, idx) => {
+          const url = imageUrls[idx];
 
-        {/* Row 2 — Slots 1 & 2 side by side */}
-        <div className="grid grid-cols-2 gap-3">
-          <SlotCell index={1} imageUrls={imageUrls} isLoading={isLoading} />
-          <SlotCell index={2} imageUrls={imageUrls} isLoading={isLoading} />
-        </div>
+          if (url) {
+            return (
+              <div
+                key={idx}
+                className="relative aspect-square rounded-xl overflow-hidden border border-border/30 group
+                           animate-in fade-in duration-500"
+              >
+                <Image
+                  src={url}
+                  alt={label}
+                  fill
+                  className="object-cover transition-transform duration-700 group-hover:scale-[1.02]"
+                  unoptimized
+                />
+                {/* Label overlay on hover */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <div className="absolute bottom-0 left-0 right-0 p-3 translate-y-1 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                  <span className="text-[11px] font-semibold text-white tracking-wide uppercase">
+                    {label}
+                  </span>
+                </div>
+              </div>
+            );
+          }
 
-        {/* Row 3 — Slot 3: full-width mood image */}
-        <SlotCell index={3} imageUrls={imageUrls} isLoading={isLoading} />
+          if (isLoading) {
+            return <ImageSkeleton key={idx} label={label} index={idx} />;
+          }
+
+          return null;
+        })}
       </div>
 
       <p className="text-[11px] text-muted-foreground/40 text-center">
@@ -66,47 +78,4 @@ export function ArtGrid({ imageUrls, isLoading }: ArtGridProps) {
       </p>
     </section>
   );
-}
-
-function SlotCell({
-  index,
-  imageUrls,
-  isLoading,
-}: {
-  index: number;
-  imageUrls: string[];
-  isLoading?: boolean;
-}) {
-  const url   = imageUrls[index];
-  const label = IMAGE_LABELS[index];
-
-  if (url) {
-    return (
-      <div
-        className={`relative ${SLOT_ASPECT[index]} rounded-xl overflow-hidden border border-border/30 group
-                    animate-in fade-in duration-500`}
-      >
-        <Image
-          src={url}
-          alt={label}
-          fill
-          className="object-cover transition-transform duration-700 group-hover:scale-[1.02]"
-          unoptimized
-        />
-        {/* Label overlay on hover */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-        <div className="absolute bottom-0 left-0 right-0 p-3 translate-y-1 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-300">
-          <span className="text-[11px] font-semibold text-white tracking-wide uppercase">
-            {label}
-          </span>
-        </div>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return <ImageSkeleton label={label} index={index} />;
-  }
-
-  return null;
 }
