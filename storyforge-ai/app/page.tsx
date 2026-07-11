@@ -210,7 +210,10 @@ export default function Home() {
           <div className="space-y-10">
             {/* Active options badges — shown once at the top of results */}
             {activeBadges.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 -mb-4">
+              <div className="rounded-xl border border-border/30 bg-muted/20 px-4 py-3 flex flex-wrap gap-1.5">
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50 self-center mr-1">
+                  Generated with
+                </span>
                 {activeBadges.map((badge) => (
                   <span
                     key={badge}

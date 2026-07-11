@@ -40,6 +40,14 @@ const EXAMPLES = [
 // Shared select styling
 const triggerCls = "h-9 text-sm border-border/50 bg-transparent";
 
+// Per-select display label functions — map stored values to friendly trigger text
+const GENRE_LABEL   = (v: string) => v === "None" ? "Any genre"    : v;
+const TONE_LABEL    = (v: string) => v === "Any"  ? "Any tone"     : v;
+const LENGTH_LABEL  = (v: string) => v === "Any"  ? "Any scope"    : v;
+const ENDING_LABEL  = (v: string) => v === "Any"  ? "Any ending"   : v;
+const AUDIENCE_LABEL= (v: string) => v === "Any"  ? "Any audience" : v;
+const ERA_LABEL     = (v: string) => v === "Any"  ? "Any era"      : v;
+
 // Small helper: how many advanced options are non-default
 function countAdvanced(opts: StoryOptions): number {
   let n = 0;
@@ -101,7 +109,7 @@ export function PromptInput({
           disabled={isLoading}
         >
           <SelectTrigger className={`w-[130px] ${triggerCls}`}>
-            <SelectValue placeholder="Genre" />
+            <span className="truncate">{GENRE_LABEL(options.genre)}</span>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="None">Any genre</SelectItem>
@@ -117,8 +125,8 @@ export function PromptInput({
           onValueChange={(v) => onOptionsChange({ tone: v as StoryOptions["tone"] })}
           disabled={isLoading}
         >
-          <SelectTrigger className={`w-[170px] ${triggerCls}`}>
-            <SelectValue placeholder="Tone" />
+          <SelectTrigger className={`w-[175px] ${triggerCls}`}>
+            <span className="truncate">{TONE_LABEL(options.tone)}</span>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="Any">Any tone</SelectItem>
@@ -128,14 +136,14 @@ export function PromptInput({
           </SelectContent>
         </Select>
 
-        {/* Length */}
+        {/* Scope */}
         <Select
           value={options.length}
           onValueChange={(v) => onOptionsChange({ length: v as StoryOptions["length"] })}
           disabled={isLoading}
         >
           <SelectTrigger className={`w-[150px] ${triggerCls}`}>
-            <SelectValue placeholder="Scope" />
+            <span className="truncate">{LENGTH_LABEL(options.length)}</span>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="Any">Any scope</SelectItem>
@@ -151,8 +159,8 @@ export function PromptInput({
           onValueChange={(v) => onOptionsChange({ ending: v as StoryOptions["ending"] })}
           disabled={isLoading}
         >
-          <SelectTrigger className={`w-[160px] ${triggerCls}`}>
-            <SelectValue placeholder="Ending" />
+          <SelectTrigger className={`w-[155px] ${triggerCls}`}>
+            <span className="truncate">{ENDING_LABEL(options.ending)}</span>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="Any">Any ending</SelectItem>
@@ -208,7 +216,7 @@ export function PromptInput({
                 disabled={isLoading}
               >
                 <SelectTrigger className={`w-[175px] ${triggerCls}`}>
-                  <SelectValue placeholder="Audience" />
+                  <span className="truncate">{AUDIENCE_LABEL(options.audience)}</span>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Any">Any audience</SelectItem>
@@ -230,7 +238,7 @@ export function PromptInput({
                 disabled={isLoading}
               >
                 <SelectTrigger className={`w-[210px] ${triggerCls}`}>
-                  <SelectValue placeholder="Era" />
+                  <span className="truncate">{ERA_LABEL(options.era)}</span>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Any">Any era</SelectItem>

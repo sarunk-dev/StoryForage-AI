@@ -99,6 +99,7 @@ export const LENGTHS = [
   "Short Story",
   "Feature Film",
   "TV Pilot",
+  "Video Game",
   "Book Series / Epic",
 ] as const;
 export type StoryLength = (typeof LENGTHS)[number] | "Any";
