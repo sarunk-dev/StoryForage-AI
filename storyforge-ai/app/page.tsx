@@ -58,32 +58,42 @@ export default function Home() {
 
       setDeck({ prompt, genre: options.genre, story, characters, world, imagePrompts, imageUrls: [] });
 
-      // ── Audio narration — sequential, server handles retries ─────────────
+      // ── Audio narration — sequential with client-side retry ──────────────
+      // Retries live here (not in the route) so the server call stays short
+      // and is never killed by the implicit dev-mode Node timeout.
       setStep("audio");
 
       const narrateAct = async (
         text: string,
         actKey: "act1" | "act2" | "act3"
       ): Promise<string | undefined> => {
-        try {
-          const res = await fetch("/api/narrate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text, genre: options.genre, actKey, tone: story.tone }),
-          });
-          if (!res.ok) return undefined;
-          const data = await res.json();
-          return data.audioBase64 as string | undefined;
-        } catch {
-          return undefined;
+        const body = JSON.stringify({ text, genre: options.genre, actKey, tone: story.tone });
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            if (attempt > 0) await sleep(3000); // 3 s back-off on retry
+            const res = await fetch("/api/narrate", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body,
+            });
+            if (!res.ok) {
+              console.warn(`[narrate] ${actKey} attempt ${attempt + 1} failed: ${res.status}`);
+              continue;
+            }
+            const { audioBase64 } = await res.json();
+            if (audioBase64) return audioBase64 as string;
+          } catch (e) {
+            console.warn(`[narrate] ${actKey} attempt ${attempt + 1} threw:`, e);
+          }
         }
+        return undefined;
       };
 
-      // 1 s gap between calls — lets ElevenLabs quota window clear
+      // 2 s gap between calls — lets ElevenLabs quota window fully clear
       const act1Audio = await narrateAct(story.acts.act1, "act1");
-      await sleep(1000);
+      await sleep(2000);
       const act2Audio = await narrateAct(story.acts.act2, "act2");
-      await sleep(1000);
+      await sleep(2000);
       const act3Audio = await narrateAct(story.acts.act3, "act3");
 
       const actAudioUrls: { act1?: string; act2?: string; act3?: string } = {
