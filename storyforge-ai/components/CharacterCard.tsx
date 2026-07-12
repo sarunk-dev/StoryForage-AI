@@ -1,7 +1,7 @@
 "use client";
 
 import type { Character } from "@/lib/types";
-import { Users } from "lucide-react";
+import { Users, RefreshCw } from "lucide-react";
 
 interface CharacterCardProps {
   character: Character;
@@ -80,14 +80,31 @@ export function CharacterCard({ character, index }: CharacterCardProps) {
 
 interface CharactersSectionProps {
   characters: Character[];
+  onRegenerate?: () => void;
+  isRegenerating?: boolean;
 }
 
-export function CharactersSection({ characters }: CharactersSectionProps) {
+export function CharactersSection({ characters, onRegenerate, isRegenerating }: CharactersSectionProps) {
   return (
     <section className="space-y-6">
-      <div className="flex items-center gap-2 section-label">
-        <Users className="w-3.5 h-3.5" />
-        Characters
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 section-label">
+          <Users className="w-3.5 h-3.5" />
+          Characters
+        </div>
+        {onRegenerate && (
+          <button
+            onClick={onRegenerate}
+            disabled={isRegenerating}
+            title="Regenerate characters"
+            className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/50 hover:text-primary
+                       hover:bg-primary/8 border border-transparent hover:border-primary/20
+                       rounded-lg px-2.5 py-1.5 transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={`w-3 h-3 ${isRegenerating ? "animate-spin" : ""}`} />
+            {isRegenerating ? "Regenerating…" : "Regenerate"}
+          </button>
+        )}
       </div>
       {/* 
         Up to 3 cards side-by-side on wide screens.

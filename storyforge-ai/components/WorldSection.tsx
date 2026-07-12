@@ -1,13 +1,15 @@
 "use client";
 
 import type { WorldBuilding } from "@/lib/types";
-import { Globe } from "lucide-react";
+import { Globe, RefreshCw } from "lucide-react";
 
 interface WorldSectionProps {
   world: WorldBuilding;
+  onRegenerate?: () => void;
+  isRegenerating?: boolean;
 }
 
-export function WorldSection({ world }: WorldSectionProps) {
+export function WorldSection({ world, onRegenerate, isRegenerating }: WorldSectionProps) {
   const fields = [
     { label: "Geography & Environment", value: world.geography },
     { label: "Rules & Systems", value: world.rulesOrSystem },
@@ -16,9 +18,24 @@ export function WorldSection({ world }: WorldSectionProps) {
 
   return (
     <section className="space-y-6">
-      <div className="flex items-center gap-2 section-label">
-        <Globe className="w-3.5 h-3.5" />
-        World Building
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 section-label">
+          <Globe className="w-3.5 h-3.5" />
+          World Building
+        </div>
+        {onRegenerate && (
+          <button
+            onClick={onRegenerate}
+            disabled={isRegenerating}
+            title="Regenerate world building"
+            className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/50 hover:text-primary
+                       hover:bg-primary/8 border border-transparent hover:border-primary/20
+                       rounded-lg px-2.5 py-1.5 transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={`w-3 h-3 ${isRegenerating ? "animate-spin" : ""}`} />
+            {isRegenerating ? "Regenerating…" : "Regenerate"}
+          </button>
+        )}
       </div>
 
       {/* Ink-surface setting card */}

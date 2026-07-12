@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import type { StoryOutline } from "@/lib/types";
-import { BookOpen, Volume2, VolumeX } from "lucide-react";
+import { BookOpen, Volume2, VolumeX, RefreshCw } from "lucide-react";
 
 interface StorySectionProps {
   story: StoryOutline;
@@ -13,6 +13,8 @@ interface StorySectionProps {
     act2?: string;
     act3?: string;
   };
+  onRegenerate?: () => void;
+  isRegenerating?: boolean;
 }
 
 type ActKey = "act1" | "act2" | "act3";
@@ -79,7 +81,7 @@ function ActPlayer({ base64 }: ActPlayerProps) {
   );
 }
 
-export function StorySection({ story, genre, actAudioUrls }: StorySectionProps) {
+export function StorySection({ story, genre, actAudioUrls, onRegenerate, isRegenerating }: StorySectionProps) {
   const acts: { label: string; sub: string; content: string; key: ActKey }[] = [
     { label: "Act I",   sub: "Setup",      content: story.acts.act1, key: "act1" },
     { label: "Act II",  sub: "Conflict",   content: story.acts.act2, key: "act2" },
@@ -89,9 +91,24 @@ export function StorySection({ story, genre, actAudioUrls }: StorySectionProps) 
   return (
     <section className="space-y-7">
       {/* Section label */}
-      <div className="flex items-center gap-2 section-label">
-        <BookOpen className="w-3.5 h-3.5" />
-        Story Outline
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 section-label">
+          <BookOpen className="w-3.5 h-3.5" />
+          Story Outline
+        </div>
+        {onRegenerate && (
+          <button
+            onClick={onRegenerate}
+            disabled={isRegenerating}
+            title="Regenerate story outline"
+            className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/50 hover:text-primary
+                       hover:bg-primary/8 border border-transparent hover:border-primary/20
+                       rounded-lg px-2.5 py-1.5 transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={`w-3 h-3 ${isRegenerating ? "animate-spin" : ""}`} />
+            {isRegenerating ? "Regenerating…" : "Regenerate"}
+          </button>
+        )}
       </div>
 
       {/* Title block */}

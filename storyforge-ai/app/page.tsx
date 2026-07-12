@@ -9,11 +9,14 @@ import { WorldSection } from "@/components/WorldSection";
 import { ArtGrid } from "@/components/ArtGrid";
 import { ExportButton } from "@/components/ExportButton";
 import { Separator } from "@/components/ui/separator";
-import type { PitchDeck, GenerationStep, StoryOptions } from "@/lib/types";
+import type { PitchDeck, GenerationStep, StoryOptions, StoryOutline, Character, WorldBuilding } from "@/lib/types";
 import { DEFAULT_OPTIONS } from "@/lib/types";
 import { AlertCircle, Flame, Moon, Sun } from "lucide-react";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// Which section is currently regenerating (only one at a time)
+type RegeneratingSection = "story" | "characters" | "world" | null;
 
 export default function Home() {
   const [prompt, setPrompt] = useState("");
@@ -22,6 +25,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [deck, setDeck] = useState<Partial<PitchDeck> | null>(null);
   const [dark, setDark] = useState(false);
+  const [regenerating, setRegenerating] = useState<RegeneratingSection>(null);
 
   // Patch a subset of options without replacing the whole object
   const patchOptions = (patch: Partial<StoryOptions>) =>
@@ -141,6 +145,103 @@ export default function Home() {
     }
   };
 
+  // ── Per-section regenerate handlers ─────────────────────────────────────────
+  // Each calls /api/regenerate with its target + current context, then patches
+  // only the relevant slice of deck. Story regen also clears stale audio so
+  // the old narration doesn't play over different text.
+
+  const handleRegenerateStory = async () => {
+    if (!deck || regenerating) return;
+    setRegenerating("story");
+    try {
+      const res = await fetch("/api/regenerate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target: "story", prompt, options }),
+      });
+      if (!res.ok) return;
+      const { story } = (await res.json()) as { story: StoryOutline };
+      // Clear stale audio — it belongs to the old story text
+      setDeck((prev) => prev ? { ...prev, story, actAudioUrls: {} } : null);
+      // Re-generate audio for the new story in the background
+      regenerateAudio(story);
+    } finally {
+      setRegenerating(null);
+    }
+  };
+
+  const handleRegenerateCharacters = async () => {
+    if (!deck?.story || regenerating) return;
+    setRegenerating("characters");
+    try {
+      const res = await fetch("/api/regenerate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target: "characters", prompt, options, story: deck.story }),
+      });
+      if (!res.ok) return;
+      const { characters } = (await res.json()) as { characters: Character[] };
+      setDeck((prev) => prev ? { ...prev, characters } : null);
+    } finally {
+      setRegenerating(null);
+    }
+  };
+
+  const handleRegenerateWorld = async () => {
+    if (!deck?.story || !deck?.characters || regenerating) return;
+    setRegenerating("world");
+    try {
+      const res = await fetch("/api/regenerate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target: "world", prompt, options, story: deck.story, characters: deck.characters }),
+      });
+      if (!res.ok) return;
+      const { world } = (await res.json()) as { world: WorldBuilding };
+      setDeck((prev) => prev ? { ...prev, world } : null);
+    } finally {
+      setRegenerating(null);
+    }
+  };
+
+  // Runs the 3-act narration pipeline in the background (non-blocking).
+  // Used after a story regeneration to refresh audio without blocking the UI.
+  const regenerateAudio = async (story: StoryOutline) => {
+    const narrateAct = async (
+      text: string,
+      actKey: "act1" | "act2" | "act3"
+    ): Promise<string | undefined> => {
+      const body = JSON.stringify({ text, genre: options.genre, actKey, tone: story.tone });
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          if (attempt > 0) await sleep(3000);
+          const res = await fetch("/api/narrate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body,
+          });
+          if (!res.ok) continue;
+          const { audioBase64 } = await res.json();
+          if (audioBase64) return audioBase64 as string;
+        } catch { /* non-fatal */ }
+      }
+      return undefined;
+    };
+
+    const act1Audio = await narrateAct(story.acts.act1, "act1");
+    await sleep(2000);
+    const act2Audio = await narrateAct(story.acts.act2, "act2");
+    await sleep(2000);
+    const act3Audio = await narrateAct(story.acts.act3, "act3");
+
+    const actAudioUrls = {
+      ...(act1Audio ? { act1: act1Audio } : {}),
+      ...(act2Audio ? { act2: act2Audio } : {}),
+      ...(act3Audio ? { act3: act3Audio } : {}),
+    };
+    setDeck((prev) => prev ? { ...prev, actAudioUrls } : null);
+  };
+
   const isLoading = step !== "idle" && step !== "done" && step !== "error";
   const isDone    = step === "done";
   const hasText   = deck?.story && deck?.characters && deck?.world;
@@ -258,11 +359,21 @@ export default function Home() {
               story={deck.story!}
               genre={options.genre}
               actAudioUrls={deck.actAudioUrls}
+              onRegenerate={isDone ? handleRegenerateStory : undefined}
+              isRegenerating={regenerating === "story"}
             />
             <Separator />
-            <CharactersSection characters={deck.characters!} />
+            <CharactersSection
+              characters={deck.characters!}
+              onRegenerate={isDone ? handleRegenerateCharacters : undefined}
+              isRegenerating={regenerating === "characters"}
+            />
             <Separator />
-            <WorldSection world={deck.world!} />
+            <WorldSection
+              world={deck.world!}
+              onRegenerate={isDone ? handleRegenerateWorld : undefined}
+              isRegenerating={regenerating === "world"}
+            />
 
             {(hasImages || step === "images") && (
               <>
