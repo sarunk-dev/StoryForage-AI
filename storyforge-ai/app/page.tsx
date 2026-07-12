@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { PromptInput } from "@/components/PromptInput";
 import { LoadingPipeline } from "@/components/LoadingPipeline";
 import { StorySection } from "@/components/StorySection";
@@ -29,6 +29,10 @@ export default function Home() {
   const [regenerating, setRegenerating] = useState<RegeneratingSection>(null);
   // Demo deck is expanded by default so judges see output immediately
   const [demoOpen, setDemoOpen] = useState(true);
+  // Holds the AbortController for the currently running generation so a
+  // re-submit or unmount can cancel the in-flight /api/generate request,
+  // which propagates via req.signal all the way to the IBM WatsonX call.
+  const abortRef = useRef<AbortController | null>(null);
 
   // Patch a subset of options without replacing the whole object
   const patchOptions = (patch: Partial<StoryOptions>) =>
@@ -39,8 +43,19 @@ export default function Home() {
     document.documentElement.classList.toggle("dark", dark);
   }, [dark]);
 
+  // Abort any in-flight generation when the component unmounts (e.g. hot reload)
+  useEffect(() => {
+    return () => { abortRef.current?.abort(); };
+  }, []);
+
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
+
+    // Cancel any in-flight request from a previous generate click
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setStep("story");
     setError(null);
     setDeck(null);
@@ -51,6 +66,7 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: prompt.trim(), options }),
+        signal: controller.signal,
       });
       if (!textRes.ok) {
         const errData = await textRes.json().catch(() => ({}));
@@ -65,10 +81,9 @@ export default function Home() {
 
       setDeck({ prompt, genre: options.genre, story, characters, world, imagePrompts, imageUrls: [] });
 
-      // ── Audio narration + Image generation — run concurrently ────────────
-      // Narration is sequential per-act (ElevenLabs quota); images are fully
-      // parallel (each gets its own direct Pollinations URL from /api/images
-      // instantly, then the browser fetches all 4 images simultaneously).
+      // ── Audio narration — sequential with client-side retry ──────────────
+      // Retries live here (not in the route) so the server call stays short
+      // and is never killed by the implicit dev-mode Node timeout.
       setStep("audio");
 
       const narrateAct = async (
@@ -97,45 +112,8 @@ export default function Home() {
         return undefined;
       };
 
-      // ── Images — sequential, one at a time ───────────────────────────────
-      // Pollinations hard-429s concurrent requests from the same server IP
-      // (confirmed: parallel fires 3×429 immediately, sequential 4/4 succeed).
-      // Each image renders as soon as it arrives; server retries 429s internally.
-      const fetchImages = async () => {
-        const urls: (string | null)[] = [null, null, null, null];
-        for (let i = 0; i < (imagePrompts as string[]).length; i++) {
-          try {
-            const imgRes = await fetch("/api/images", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                prompt: (imagePrompts as string[])[i],
-                index:  i,
-                genre:  options.genre !== "None" ? options.genre : undefined,
-                tone:   options.tone  !== "Any"  ? options.tone  : undefined,
-              }),
-            });
-            if (imgRes.ok) {
-              const { imageUrl } = await imgRes.json();
-              urls[i] = imageUrl;
-              // Render each image as it arrives
-              setDeck((prev) =>
-                prev ? { ...prev, imageUrls: urls.filter((u): u is string => u !== null) } : null
-              );
-            }
-          } catch {
-            // Non-fatal — continue to next image
-          }
-        }
-      };
-
-      // Start images concurrently with act1 narration — they run in parallel
-      // because fetchImages is sequential *within itself* (image-to-image),
-      // but the whole image pipeline doesn't block narration from starting.
-      const [act1Audio] = await Promise.all([
-        narrateAct(story.acts.act1, "act1"),
-        fetchImages(),
-      ]);
+      // 2 s gap between calls — lets ElevenLabs quota window fully clear
+      const act1Audio = await narrateAct(story.acts.act1, "act1");
       await sleep(2000);
       const act2Audio = await narrateAct(story.acts.act2, "act2");
       await sleep(2000);
@@ -148,8 +126,42 @@ export default function Home() {
       };
 
       setDeck((prev) => prev ? { ...prev, actAudioUrls } : null);
+
+      // ── Image generation — one image at a time, each renders immediately ──
+      setStep("images");
+
+      const urls: (string | null)[] = [null, null, null, null];
+      for (let i = 0; i < (imagePrompts as string[]).length; i++) {
+        try {
+          const imgRes = await fetch("/api/images", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              prompt: (imagePrompts as string[])[i],
+              index:  i,
+              genre:  options.genre !== "None" ? options.genre : undefined,
+              tone:   options.tone  !== "Any"  ? options.tone  : undefined,
+            }),
+          });
+          if (imgRes.ok) {
+            const { imageUrl } = await imgRes.json();
+            urls[i] = imageUrl;
+            // Push the latest snapshot so the UI updates as each image arrives
+            const snapshot = urls.map((u) => u ?? "").filter(Boolean);
+            setDeck((prev) => prev ? { ...prev, imageUrls: snapshot } : null);
+          }
+        } catch {
+          // Non-fatal — continue to next image
+        }
+      }
+
       setStep("done");
     } catch (err) {
+      // AbortError means we intentionally cancelled (re-submit / unmount) — not an error
+      if (err instanceof Error && err.name === "AbortError") {
+        setStep("idle");
+        return;
+      }
       setError(err instanceof Error ? err.message : "Something went wrong");
       setStep("error");
     }
@@ -412,12 +424,12 @@ export default function Home() {
               isRegenerating={regenerating === "world"}
             />
 
-            {(hasImages || step === "audio" || step === "images") && (
+            {(hasImages || step === "images") && (
               <>
                 <Separator />
                 <ArtGrid
                   imageUrls={deck.imageUrls ?? []}
-                  isLoading={step === "audio" || step === "images"}
+                  isLoading={step === "images"}
                 />
               </>
             )}

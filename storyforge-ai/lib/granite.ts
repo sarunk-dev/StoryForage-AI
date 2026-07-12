@@ -27,15 +27,24 @@ function getClient(): WatsonXAI {
  * Call IBM Granite 4 via the chat completions API (/ml/v1/text/chat).
  * granite-4-h-small is a chat model — the old generateText API returns empty strings.
  * All prompt templates request JSON output — parse in the caller.
+ *
+ * Pass `signal` (from the incoming NextRequest) so if the client disconnects
+ * mid-request the upstream IBM connection is aborted immediately, freeing
+ * the concurrent-request slot on the free-tier plan.
  */
 export async function generateText(
   userPrompt: string,
   systemPrompt: string,
-  options: { maxTokens?: number } = {}
+  options: { maxTokens?: number; signal?: AbortSignal } = {}
 ): Promise<string> {
   const watsonx = getClient();
   const projectId = process.env.WATSONX_PROJECT_ID!;
 
+  // `signal` is a first-class param on all WatsonX SDK methods —
+  // validators.js line 30 includes it in commonParams, and vml_v1.js
+  // line 2226 wires it to axiosOptions internally. Passing it here causes
+  // Axios to abort the IBM HTTP call when the client disconnects, freeing
+  // the concurrent-request slot on the free-tier plan.
   const response = await watsonx.textChat({
     modelId: "ibm/granite-4-h-small",
     projectId,
@@ -46,6 +55,7 @@ export async function generateText(
     maxTokens: options.maxTokens ?? 2048,
     temperature: 0.7,
     topP: 0.9,
+    ...(options.signal ? { signal: options.signal } : {}),
   });
 
   const content = response.result?.choices?.[0]?.message?.content;
@@ -87,7 +97,7 @@ export function parseJSON<T>(raw: string): T {
 export async function generateJSON<T>(
   userPrompt: string,
   systemPrompt: string,
-  options: { maxTokens?: number } = {}
+  options: { maxTokens?: number; signal?: AbortSignal } = {}
 ): Promise<T> {
   const raw = await generateText(userPrompt, systemPrompt, options);
 

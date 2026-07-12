@@ -14,6 +14,9 @@ import type {
 } from "@/lib/types";
 import { DEFAULT_OPTIONS } from "@/lib/types";
 
+// Single Granite call — 30 s is sufficient; signal propagation same as /generate.
+export const maxDuration = 60;
+
 /**
  * POST /api/regenerate
  *
@@ -46,12 +49,13 @@ export async function POST(req: NextRequest) {
 
     const opts: StoryOptions = { ...DEFAULT_OPTIONS, ...(body.options ?? {}) };
     const sys = systemPrompt(opts);
+    const signal = req.signal;
 
     if (target === "story") {
       const story = await generateJSON<StoryOutline>(
         storyPrompt(prompt.trim(), opts),
         sys,
-        { maxTokens: 1024 }
+        { maxTokens: 1024, signal }
       );
       return NextResponse.json({ story });
     }
@@ -64,7 +68,7 @@ export async function POST(req: NextRequest) {
       const characters = await generateJSON<Character[]>(
         characterPrompt(story, opts),
         sys,
-        { maxTokens: 2048 }
+        { maxTokens: 2048, signal }
       );
       return NextResponse.json({ characters });
     }
@@ -78,7 +82,7 @@ export async function POST(req: NextRequest) {
       const world = await generateJSON<WorldBuilding>(
         worldPrompt(story, characters, opts),
         sys,
-        { maxTokens: 1024 }
+        { maxTokens: 1024, signal }
       );
       return NextResponse.json({ world });
     }
