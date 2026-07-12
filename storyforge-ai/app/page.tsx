@@ -339,14 +339,15 @@ export default function Home() {
           <div className="pt-16 pb-10 text-center space-y-4 max-w-2xl mx-auto">
             <div className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground border border-border/60 rounded-full px-3 py-1 mb-2">
               <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block" />
-              Powered by IBM Granite 4 + Flux AI
+              Powered by IBM Granite 4 · Flux AI · ElevenLabs
             </div>
             <h2 className="text-5xl font-extrabold tracking-tight leading-[1.1] text-gradient">
               Your story,<br />fully realized.
             </h2>
             <p className="text-muted-foreground text-base max-w-md mx-auto leading-relaxed">
               One sentence becomes a complete pitch deck — story, characters,
-              world-building, and concept art in under 60 seconds.
+              world-building, and concept art in{" "}
+              <span className="text-gradient font-semibold whitespace-nowrap">under 60 seconds</span>.
             </p>
           </div>
         )}
@@ -470,7 +471,7 @@ export default function Home() {
       {/* ── Footer ──────────────────────────────────────────────────────── */}
       <footer className="border-t border-border/30 mt-12">
         <div className="max-w-5xl mx-auto px-6 py-6 flex items-center justify-between text-xs text-muted-foreground/50">
-          <span>StoryForge AI</span>
+          <span>StoryForge AI · Built by sarunk-dev</span>
           <span>IBM AI Builders Challenge · July 2026</span>
         </div>
       </footer>
