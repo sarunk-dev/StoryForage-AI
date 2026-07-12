@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import type { StoryOutline } from "@/lib/types";
-import { BookOpen, Volume2, VolumeX, RefreshCw } from "lucide-react";
+import { BookOpen, Volume2, VolumeX, RefreshCw, Mic } from "lucide-react";
 
 interface StorySectionProps {
   story: StoryOutline;
@@ -15,6 +15,8 @@ interface StorySectionProps {
   };
   onRegenerate?: () => void;
   isRegenerating?: boolean;
+  /** Called when user manually requests audio generation for the current story */
+  onGenerateAudio?: () => void;
 }
 
 type ActKey = "act1" | "act2" | "act3";
@@ -81,7 +83,29 @@ function ActPlayer({ base64 }: ActPlayerProps) {
   );
 }
 
-export function StorySection({ story, genre, actAudioUrls, onRegenerate, isRegenerating }: StorySectionProps) {
+export function StorySection({ story, genre, actAudioUrls, onRegenerate, isRegenerating, onGenerateAudio }: StorySectionProps) {
+  const [generatingAudio, setGeneratingAudio] = useState(false);
+
+  const handleGenerateAudio = async () => {
+    if (!onGenerateAudio || generatingAudio) return;
+    setGeneratingAudio(true);
+    try {
+      await onGenerateAudio();
+    } finally {
+      setGeneratingAudio(false);
+    }
+  };
+
+  // Show the "Regenerate Audio" button only after the user has regenerated the story
+  // (actAudioUrls will be an empty object {} at that point, not undefined).
+  // Once audio is generated it gets populated, so the button disappears again.
+  const audioWasCleared =
+    onGenerateAudio !== undefined &&
+    actAudioUrls !== undefined &&
+    !actAudioUrls.act1 &&
+    !actAudioUrls.act2 &&
+    !actAudioUrls.act3;
+
   const acts: { label: string; sub: string; content: string; key: ActKey }[] = [
     { label: "Act I",   sub: "Setup",      content: story.acts.act1, key: "act1" },
     { label: "Act II",  sub: "Conflict",   content: story.acts.act2, key: "act2" },
@@ -91,7 +115,7 @@ export function StorySection({ story, genre, actAudioUrls, onRegenerate, isRegen
   return (
     <section className="space-y-7">
       {/* Section label */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2 section-label">
           <BookOpen className="w-3.5 h-3.5" />
           Story Outline
@@ -135,7 +159,23 @@ export function StorySection({ story, genre, actAudioUrls, onRegenerate, isRegen
 
       {/* Three-act structure */}
       <div className="space-y-3">
-        <p className="section-label">Three-Act Structure</p>
+        {/* Row: label + "Regenerate Audio" button (only visible after story regen) */}
+        <div className="flex items-center justify-between">
+          <p className="section-label">Three-Act Structure</p>
+          {audioWasCleared && (
+            <button
+              onClick={handleGenerateAudio}
+              disabled={generatingAudio}
+              title="Regenerate audio narration for updated story"
+              className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/50 hover:text-primary
+                         hover:bg-primary/8 border border-transparent hover:border-primary/20
+                         rounded-lg px-2.5 py-1.5 transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Mic className={`w-3 h-3 ${generatingAudio ? "animate-pulse" : ""}`} />
+              {generatingAudio ? "Generating audio…" : "Regenerate Audio"}
+            </button>
+          )}
+        </div>
         <div className="space-y-2.5">
           {acts.map(({ label, sub, content, key }) => (
             <div

@@ -62,9 +62,10 @@ export default function Home() {
 
       setDeck({ prompt, genre: options.genre, story, characters, world, imagePrompts, imageUrls: [] });
 
-      // ── Audio narration — sequential with client-side retry ──────────────
-      // Retries live here (not in the route) so the server call stays short
-      // and is never killed by the implicit dev-mode Node timeout.
+      // ── Audio narration + Image generation — run concurrently ────────────
+      // Narration is sequential per-act (ElevenLabs quota); images are fully
+      // parallel (each gets its own direct Pollinations URL from /api/images
+      // instantly, then the browser fetches all 4 images simultaneously).
       setStep("audio");
 
       const narrateAct = async (
@@ -93,8 +94,45 @@ export default function Home() {
         return undefined;
       };
 
-      // 2 s gap between calls — lets ElevenLabs quota window fully clear
-      const act1Audio = await narrateAct(story.acts.act1, "act1");
+      // ── Images — sequential, one at a time ───────────────────────────────
+      // Pollinations hard-429s concurrent requests from the same server IP
+      // (confirmed: parallel fires 3×429 immediately, sequential 4/4 succeed).
+      // Each image renders as soon as it arrives; server retries 429s internally.
+      const fetchImages = async () => {
+        const urls: (string | null)[] = [null, null, null, null];
+        for (let i = 0; i < (imagePrompts as string[]).length; i++) {
+          try {
+            const imgRes = await fetch("/api/images", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                prompt: (imagePrompts as string[])[i],
+                index:  i,
+                genre:  options.genre !== "None" ? options.genre : undefined,
+                tone:   options.tone  !== "Any"  ? options.tone  : undefined,
+              }),
+            });
+            if (imgRes.ok) {
+              const { imageUrl } = await imgRes.json();
+              urls[i] = imageUrl;
+              // Render each image as it arrives
+              setDeck((prev) =>
+                prev ? { ...prev, imageUrls: urls.filter((u): u is string => u !== null) } : null
+              );
+            }
+          } catch {
+            // Non-fatal — continue to next image
+          }
+        }
+      };
+
+      // Start images concurrently with act1 narration — they run in parallel
+      // because fetchImages is sequential *within itself* (image-to-image),
+      // but the whole image pipeline doesn't block narration from starting.
+      const [act1Audio] = await Promise.all([
+        narrateAct(story.acts.act1, "act1"),
+        fetchImages(),
+      ]);
       await sleep(2000);
       const act2Audio = await narrateAct(story.acts.act2, "act2");
       await sleep(2000);
@@ -106,38 +144,7 @@ export default function Home() {
         ...(act3Audio ? { act3: act3Audio } : {}),
       };
 
-      setDeck({ prompt, genre: options.genre, story, characters, world, imagePrompts, imageUrls: [], actAudioUrls });
-
-      // ── Image generation — one image at a time, each renders immediately ──
-      setStep("images");
-
-      // Initialise 4 empty slots so ArtGrid skeletons show from the start
-      const urls: (string | null)[] = [null, null, null, null];
-
-      for (let i = 0; i < imagePrompts.length; i++) {
-        try {
-          const imgRes = await fetch("/api/images", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              prompt: imagePrompts[i],
-              index:  i,
-              genre:  options.genre !== "None" ? options.genre : undefined,
-              tone:   options.tone  !== "Any"  ? options.tone  : undefined,
-            }),
-          });
-          if (imgRes.ok) {
-            const { imageUrl } = await imgRes.json();
-            urls[i] = imageUrl;
-            // Push the latest snapshot so the UI updates as each image arrives
-            const snapshot = urls.map((u) => u ?? "").filter(Boolean);
-            setDeck((prev) => prev ? { ...prev, imageUrls: snapshot } : null);
-          }
-        } catch {
-          // Non-fatal — continue to next image if one fails
-        }
-      }
-
+      setDeck((prev) => prev ? { ...prev, actAudioUrls } : null);
       setStep("done");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -147,8 +154,8 @@ export default function Home() {
 
   // ── Per-section regenerate handlers ─────────────────────────────────────────
   // Each calls /api/regenerate with its target + current context, then patches
-  // only the relevant slice of deck. Story regen also clears stale audio so
-  // the old narration doesn't play over different text.
+  // only the relevant slice of deck. Story regen clears stale audio — the user
+  // can regenerate it manually via the "Generate Audio" button in StorySection.
 
   const handleRegenerateStory = async () => {
     if (!deck || regenerating) return;
@@ -161,10 +168,8 @@ export default function Home() {
       });
       if (!res.ok) return;
       const { story } = (await res.json()) as { story: StoryOutline };
-      // Clear stale audio — it belongs to the old story text
+      // Clear stale audio — user must click "Generate Audio" to refresh it
       setDeck((prev) => prev ? { ...prev, story, actAudioUrls: {} } : null);
-      // Re-generate audio for the new story in the background
-      regenerateAudio(story);
     } finally {
       setRegenerating(null);
     }
@@ -204,9 +209,11 @@ export default function Home() {
     }
   };
 
-  // Runs the 3-act narration pipeline in the background (non-blocking).
-  // Used after a story regeneration to refresh audio without blocking the UI.
-  const regenerateAudio = async (story: StoryOutline) => {
+  // ── Manual audio generation — triggered by "Generate Audio" button ───────────
+  // Called from StorySection when the user explicitly requests narration for the
+  // current (possibly regenerated) story. Sends /api/narrate for each act
+  // sequentially to respect ElevenLabs quota, then patches actAudioUrls.
+  const handleGenerateAudio = async (story: StoryOutline) => {
     const narrateAct = async (
       text: string,
       actKey: "act1" | "act2" | "act3"
@@ -227,6 +234,9 @@ export default function Home() {
       }
       return undefined;
     };
+
+    // Clear existing audio first so per-act players show loading state
+    setDeck((prev) => prev ? { ...prev, actAudioUrls: {} } : null);
 
     const act1Audio = await narrateAct(story.acts.act1, "act1");
     await sleep(2000);
@@ -361,6 +371,7 @@ export default function Home() {
               actAudioUrls={deck.actAudioUrls}
               onRegenerate={isDone ? handleRegenerateStory : undefined}
               isRegenerating={regenerating === "story"}
+              onGenerateAudio={isDone ? () => handleGenerateAudio(deck.story!) : undefined}
             />
             <Separator />
             <CharactersSection
@@ -375,12 +386,12 @@ export default function Home() {
               isRegenerating={regenerating === "world"}
             />
 
-            {(hasImages || step === "images") && (
+            {(hasImages || step === "audio" || step === "images") && (
               <>
                 <Separator />
                 <ArtGrid
                   imageUrls={deck.imageUrls ?? []}
-                  isLoading={step === "images"}
+                  isLoading={step === "audio" || step === "images"}
                 />
               </>
             )}

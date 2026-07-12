@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { Palette } from "lucide-react";
 
 interface ArtGridProps {
@@ -47,12 +46,18 @@ export function ArtGrid({ imageUrls, isLoading }: ArtGridProps) {
                 className="relative aspect-square rounded-xl overflow-hidden border border-border/30 group
                            animate-in fade-in duration-500"
               >
-                <Image
+                {/*
+                  Plain <img> instead of next/image:
+                  next/image blocks external hostnames unless listed in remotePatterns
+                  (requires a config change + server restart). Since `unoptimized` was
+                  already set, Next's optimisation pipeline was bypassed anyway — a
+                  native img tag is strictly equivalent here with no extra config.
+                */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
                   src={url}
                   alt={label}
-                  fill
-                  className="object-cover transition-transform duration-700 group-hover:scale-[1.03]"
-                  unoptimized
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
                 />
                 {/* Label overlay on hover */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
