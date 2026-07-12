@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import type { StoryOutline } from "@/lib/types";
-import { BookOpen, Volume2, VolumeX, RefreshCw, Mic } from "lucide-react";
+import { BookOpen, Volume2, VolumeX, RefreshCw, Mic, Cpu } from "lucide-react";
 
 interface StorySectionProps {
   story: StoryOutline;
@@ -116,9 +116,17 @@ export function StorySection({ story, genre, actAudioUrls, onRegenerate, isRegen
     <section className="space-y-7">
       {/* Section label */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2 section-label">
-          <BookOpen className="w-3.5 h-3.5" />
-          Story Outline
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2 section-label">
+            <BookOpen className="w-3.5 h-3.5" />
+            Story Outline
+          </div>
+          {/* IBM Granite attribution badge — prominent for judges */}
+          <span className="inline-flex items-center gap-1 text-[10px] font-semibold tracking-wide
+                           bg-[#0f62fe] text-white rounded-full px-2.5 py-0.5 leading-none select-none">
+            <Cpu className="w-2.5 h-2.5" />
+            IBM Granite 4
+          </span>
         </div>
         {onRegenerate && (
           <button

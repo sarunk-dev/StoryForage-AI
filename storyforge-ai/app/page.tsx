@@ -8,10 +8,11 @@ import { CharactersSection } from "@/components/CharacterCard";
 import { WorldSection } from "@/components/WorldSection";
 import { ArtGrid } from "@/components/ArtGrid";
 import { ExportButton } from "@/components/ExportButton";
+import { DemoDeck } from "@/components/DemoDeck";
 import { Separator } from "@/components/ui/separator";
 import type { PitchDeck, GenerationStep, StoryOptions, StoryOutline, Character, WorldBuilding } from "@/lib/types";
 import { DEFAULT_OPTIONS } from "@/lib/types";
-import { AlertCircle, Flame, Moon, Sun } from "lucide-react";
+import { AlertCircle, Flame, Moon, Sun, ChevronDown, ChevronUp } from "lucide-react";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -26,6 +27,8 @@ export default function Home() {
   const [deck, setDeck] = useState<Partial<PitchDeck> | null>(null);
   const [dark, setDark] = useState(false);
   const [regenerating, setRegenerating] = useState<RegeneratingSection>(null);
+  // Demo deck is expanded by default so judges see output immediately
+  const [demoOpen, setDemoOpen] = useState(true);
 
   // Patch a subset of options without replacing the whole object
   const patchOptions = (patch: Partial<StoryOptions>) =>
@@ -326,6 +329,29 @@ export default function Home() {
             />
           </div>
         </div>
+
+        {/* ── Demo deck — visible on landing so judges see output instantly ── */}
+        {showHero && (
+          <div className="max-w-2xl mx-auto pb-8">
+            <button
+              onClick={() => setDemoOpen((o) => !o)}
+              className="w-full flex items-center justify-between gap-2 rounded-xl border border-border/50
+                         bg-muted/20 px-4 py-3 text-[11px] font-semibold uppercase tracking-widest
+                         text-muted-foreground/60 hover:text-foreground/70 hover:bg-muted/30
+                         transition-colors select-none mb-2"
+            >
+              <span>Sample output — see what StoryForge generates</span>
+              {demoOpen
+                ? <ChevronUp className="w-3.5 h-3.5 flex-shrink-0" />
+                : <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" />}
+            </button>
+            {demoOpen && (
+              <div className="animate-in fade-in slide-in-from-top-2 duration-200">
+                <DemoDeck />
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── Loading pipeline ──────────────────────────────────────────── */}
         {isLoading && (
