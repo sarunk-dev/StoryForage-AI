@@ -81,80 +81,100 @@ export default function Home() {
 
       setDeck({ prompt, genre: options.genre, story, characters, world, imagePrompts, imageUrls: [] });
 
-      // ── Audio narration — sequential with client-side retry ──────────────
-      // Retries live here (not in the route) so the server call stays short
-      // and is never killed by the implicit dev-mode Node timeout.
+      // ── Images + Narration — both lanes start immediately in parallel ─────
+      // Lane A (images): image[0] → [1] → [2] → [3], each renders as it arrives.
+      // Lane B (narration): sweep 1 → act1/2/3 with 2 s gaps between each act;
+      //   sweep 2 retries only the acts that failed in sweep 1. No sweep 3.
       setStep("audio");
 
-      const narrateAct = async (
+      // Single narrate call — one act, one attempt, no internal retry loop
+      const narrateOne = async (
         text: string,
         actKey: "act1" | "act2" | "act3"
       ): Promise<string | undefined> => {
-        const body = JSON.stringify({ text, genre: options.genre, actKey, tone: story.tone });
-        for (let attempt = 0; attempt < 2; attempt++) {
-          try {
-            if (attempt > 0) await sleep(3000); // 3 s back-off on retry
-            const res = await fetch("/api/narrate", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body,
-            });
-            if (!res.ok) {
-              console.warn(`[narrate] ${actKey} attempt ${attempt + 1} failed: ${res.status}`);
-              continue;
-            }
-            const { audioBase64 } = await res.json();
-            if (audioBase64) return audioBase64 as string;
-          } catch (e) {
-            console.warn(`[narrate] ${actKey} attempt ${attempt + 1} threw:`, e);
-          }
-        }
-        return undefined;
-      };
-
-      // 2 s gap between calls — lets ElevenLabs quota window fully clear
-      const act1Audio = await narrateAct(story.acts.act1, "act1");
-      await sleep(2000);
-      const act2Audio = await narrateAct(story.acts.act2, "act2");
-      await sleep(2000);
-      const act3Audio = await narrateAct(story.acts.act3, "act3");
-
-      const actAudioUrls: { act1?: string; act2?: string; act3?: string } = {
-        ...(act1Audio ? { act1: act1Audio } : {}),
-        ...(act2Audio ? { act2: act2Audio } : {}),
-        ...(act3Audio ? { act3: act3Audio } : {}),
-      };
-
-      setDeck((prev) => prev ? { ...prev, actAudioUrls } : null);
-
-      // ── Image generation — one image at a time, each renders immediately ──
-      setStep("images");
-
-      const urls: (string | null)[] = [null, null, null, null];
-      for (let i = 0; i < (imagePrompts as string[]).length; i++) {
         try {
-          const imgRes = await fetch("/api/images", {
+          const res = await fetch("/api/narrate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              prompt: (imagePrompts as string[])[i],
-              index:  i,
-              genre:  options.genre !== "None" ? options.genre : undefined,
-              tone:   options.tone  !== "Any"  ? options.tone  : undefined,
-            }),
+            body: JSON.stringify({ text, genre: options.genre, actKey, tone: story.tone }),
           });
-          if (imgRes.ok) {
-            const { imageUrl } = await imgRes.json();
-            urls[i] = imageUrl;
-            // Push the latest snapshot so the UI updates as each image arrives
-            const snapshot = urls.map((u) => u ?? "").filter(Boolean);
-            setDeck((prev) => prev ? { ...prev, imageUrls: snapshot } : null);
+          if (!res.ok) {
+            console.warn(`[narrate] ${actKey} failed: ${res.status}`);
+            return undefined;
           }
-        } catch {
-          // Non-fatal — continue to next image
+          const { audioBase64 } = await res.json();
+          return audioBase64 as string | undefined;
+        } catch (e) {
+          console.warn(`[narrate] ${actKey} threw:`, e);
+          return undefined;
         }
-      }
+      };
 
+      // Lane B: two sweeps across all 3 acts; sweep 2 only retries failures.
+      // Advances the progress step to "images" once narration is done so the
+      // loading bar moves forward even while images are still running in Lane A.
+      const narrateAllActs = async (): Promise<{ act1?: string; act2?: string; act3?: string }> => {
+        const acts: { key: "act1" | "act2" | "act3"; text: string }[] = [
+          { key: "act1", text: story.acts.act1 },
+          { key: "act2", text: story.acts.act2 },
+          { key: "act3", text: story.acts.act3 },
+        ];
+        const results: { act1?: string; act2?: string; act3?: string } = {};
+
+        // Sweep 1 — try every act sequentially
+        for (let i = 0; i < acts.length; i++) {
+          if (i > 0) await sleep(2000);
+          const audio = await narrateOne(acts[i].text, acts[i].key);
+          if (audio) results[acts[i].key] = audio;
+        }
+
+        // Sweep 2 — retry only the acts that failed in sweep 1
+        const failed = acts.filter((a) => !results[a.key]);
+        for (let i = 0; i < failed.length; i++) {
+          if (i > 0) await sleep(2000);
+          const audio = await narrateOne(failed[i].text, failed[i].key);
+          if (audio) results[failed[i].key] = audio;
+        }
+
+        // Narration is done — advance progress bar to concept art step
+        setStep("images");
+        return results;
+      };
+
+      // Lane A: images — sequential, each renders as it arrives
+      const fetchAllImages = async () => {
+        const urls: (string | null)[] = [null, null, null, null];
+        for (let i = 0; i < (imagePrompts as string[]).length; i++) {
+          try {
+            const imgRes = await fetch("/api/images", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                prompt: (imagePrompts as string[])[i],
+                index:  i,
+                genre:  options.genre !== "None" ? options.genre : undefined,
+                tone:   options.tone  !== "Any"  ? options.tone  : undefined,
+              }),
+            });
+            if (imgRes.ok) {
+              const { imageUrl } = await imgRes.json();
+              urls[i] = imageUrl;
+              const snapshot = urls.map((u) => u ?? "").filter(Boolean);
+              setDeck((prev) => prev ? { ...prev, imageUrls: snapshot } : null);
+            }
+          } catch {
+            // Non-fatal — continue to next image
+          }
+        }
+      };
+
+      // Fire both lanes simultaneously — neither blocks the other
+      const [actAudioUrls] = await Promise.all([
+        narrateAllActs(),
+        fetchAllImages(),
+      ]);
+
+      setDeck((prev) => prev ? { ...prev, actAudioUrls } : null);
       setStep("done");
     } catch (err) {
       // AbortError means we intentionally cancelled (re-submit / unmount) — not an error
@@ -225,46 +245,49 @@ export default function Home() {
   };
 
   // ── Manual audio generation — triggered by "Generate Audio" button ───────────
-  // Called from StorySection when the user explicitly requests narration for the
-  // current (possibly regenerated) story. Sends /api/narrate for each act
-  // sequentially to respect ElevenLabs quota, then patches actAudioUrls.
+  // Same two-sweep logic as the main generation flow.
   const handleGenerateAudio = async (story: StoryOutline) => {
-    const narrateAct = async (
+    const narrateOne = async (
       text: string,
       actKey: "act1" | "act2" | "act3"
     ): Promise<string | undefined> => {
-      const body = JSON.stringify({ text, genre: options.genre, actKey, tone: story.tone });
-      for (let attempt = 0; attempt < 2; attempt++) {
-        try {
-          if (attempt > 0) await sleep(3000);
-          const res = await fetch("/api/narrate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body,
-          });
-          if (!res.ok) continue;
-          const { audioBase64 } = await res.json();
-          if (audioBase64) return audioBase64 as string;
-        } catch { /* non-fatal */ }
-      }
-      return undefined;
+      try {
+        const res = await fetch("/api/narrate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text, genre: options.genre, actKey, tone: story.tone }),
+        });
+        if (!res.ok) return undefined;
+        const { audioBase64 } = await res.json();
+        return audioBase64 as string | undefined;
+      } catch { return undefined; }
     };
 
     // Clear existing audio first so per-act players show loading state
     setDeck((prev) => prev ? { ...prev, actAudioUrls: {} } : null);
 
-    const act1Audio = await narrateAct(story.acts.act1, "act1");
-    await sleep(2000);
-    const act2Audio = await narrateAct(story.acts.act2, "act2");
-    await sleep(2000);
-    const act3Audio = await narrateAct(story.acts.act3, "act3");
+    const acts: { key: "act1" | "act2" | "act3"; text: string }[] = [
+      { key: "act1", text: story.acts.act1 },
+      { key: "act2", text: story.acts.act2 },
+      { key: "act3", text: story.acts.act3 },
+    ];
+    const results: { act1?: string; act2?: string; act3?: string } = {};
 
-    const actAudioUrls = {
-      ...(act1Audio ? { act1: act1Audio } : {}),
-      ...(act2Audio ? { act2: act2Audio } : {}),
-      ...(act3Audio ? { act3: act3Audio } : {}),
-    };
-    setDeck((prev) => prev ? { ...prev, actAudioUrls } : null);
+    // Sweep 1
+    for (let i = 0; i < acts.length; i++) {
+      if (i > 0) await sleep(2000);
+      const audio = await narrateOne(acts[i].text, acts[i].key);
+      if (audio) results[acts[i].key] = audio;
+    }
+    // Sweep 2 — retry only failures
+    const failed = acts.filter((a) => !results[a.key]);
+    for (let i = 0; i < failed.length; i++) {
+      if (i > 0) await sleep(2000);
+      const audio = await narrateOne(failed[i].text, failed[i].key);
+      if (audio) results[failed[i].key] = audio;
+    }
+
+    setDeck((prev) => prev ? { ...prev, actAudioUrls: results } : null);
   };
 
   const isLoading = step !== "idle" && step !== "done" && step !== "error";
@@ -424,12 +447,12 @@ export default function Home() {
               isRegenerating={regenerating === "world"}
             />
 
-            {(hasImages || step === "images") && (
+            {(hasImages || step === "audio" || step === "images") && (
               <>
                 <Separator />
                 <ArtGrid
                   imageUrls={deck.imageUrls ?? []}
-                  isLoading={step === "images"}
+                  isLoading={step === "audio" || step === "images"}
                 />
               </>
             )}
