@@ -121,11 +121,18 @@ export default function Home() {
         ];
         const results: { act1?: string; act2?: string; act3?: string } = {};
 
+        // Helper — patches the act into deck immediately so the play button
+        // appears as soon as each act's audio arrives, without waiting for images.
+        const commitAct = (key: "act1" | "act2" | "act3", audio: string) => {
+          results[key] = audio;
+          setDeck((prev) => prev ? { ...prev, actAudioUrls: { ...results } } : null);
+        };
+
         // Sweep 1 — try every act sequentially
         for (let i = 0; i < acts.length; i++) {
           if (i > 0) await sleep(2000);
           const audio = await narrateOne(acts[i].text, acts[i].key);
-          if (audio) results[acts[i].key] = audio;
+          if (audio) commitAct(acts[i].key, audio);
         }
 
         // Sweep 2 — retry only the acts that failed in sweep 1
@@ -133,7 +140,7 @@ export default function Home() {
         for (let i = 0; i < failed.length; i++) {
           if (i > 0) await sleep(2000);
           const audio = await narrateOne(failed[i].text, failed[i].key);
-          if (audio) results[failed[i].key] = audio;
+          if (audio) commitAct(failed[i].key, audio);
         }
 
         // Narration is done — advance progress bar to concept art step

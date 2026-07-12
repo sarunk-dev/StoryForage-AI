@@ -24,11 +24,11 @@ export function systemPrompt(opts: StoryOptions): string {
   const base = `You are a professional story development assistant and creative writing expert.`;
 
   const genreGuidance = opts.genre && opts.genre !== "None"
-    ? `You are generating content for a ${opts.genre} story. Every output must unmistakably feel like ${opts.genre} — use genre-appropriate language, tropes, atmosphere, and stakes.`
-    : `You are generating content for a creative story. Match the tone and genre implied by the user's concept.`;
+    ? `You are generating content for a ${opts.genre} story. Every output — story, characters, world-building, and art prompts — MUST unmistakably feel like ${opts.genre}. Use genre-appropriate language, tropes, atmosphere, and stakes throughout ALL sections.`
+    : `You are generating content for a creative story. Match the tone and genre implied by the user's concept across every section.`;
 
   const toneGuidance = opts.tone && opts.tone !== "Any"
-    ? `The emotional register throughout must be "${opts.tone}" — this should permeate the language, pacing, character voices, and every descriptive choice.`
+    ? `The emotional register throughout EVERY output must be "${opts.tone}" — this must permeate the language, pacing, character voices, world atmosphere, and every descriptive choice in all sections.`
     : "";
 
   const lengthGuidance = opts.length && opts.length !== "Any"
@@ -36,14 +36,20 @@ export function systemPrompt(opts: StoryOptions): string {
     : "";
 
   const audienceGuidance = opts.audience && opts.audience !== "Any"
-    ? `The content must be appropriate for: ${opts.audience}. Adjust vocabulary complexity, thematic depth, and content accordingly.`
+    ? `The content must be appropriate for: ${opts.audience}. Adjust vocabulary complexity, thematic depth, and content accordingly across all outputs.`
     : "";
+
+  const eraGuidance = opts.era && opts.era !== "Any"
+    ? `The setting era is "${opts.era}" — every section (story acts, characters, world, art prompts) must authentically reflect this era in language, technology, culture, and atmosphere.`
+    : "";
+
+  const consistencyRule = `CRITICAL CONSISTENCY RULE: All sections (story outline, characters, world-building, art prompts) are parts of ONE unified pitch deck. Every character name, event, location, and plot point that appears in one section MUST be consistent with all other sections. Never invent names or events that contradict what was already established in prior context you were given.`;
 
   const constraintBlock = constraints
-    ? `\n\nStory parameters to honour throughout ALL outputs:\n${constraints}`
+    ? `\n\nUser-selected story parameters — these are NON-NEGOTIABLE and must be honoured in EVERY output:\n${constraints}`
     : "";
 
-  return [base, genreGuidance, toneGuidance, lengthGuidance, audienceGuidance]
+  return [base, genreGuidance, toneGuidance, lengthGuidance, audienceGuidance, eraGuidance, consistencyRule]
     .filter(Boolean)
     .join(" ")
     + constraintBlock
@@ -55,20 +61,37 @@ export function systemPrompt(opts: StoryOptions): string {
 export function storyPrompt(userInput: string, opts: StoryOptions): string {
   const constraints = buildConstraints(opts);
   const constraintBlock = constraints
-    ? `\n\nYou MUST respect these story parameters:\n${constraints}\n`
+    ? `\n\nYou MUST strictly respect these user-selected story parameters — they are NOT optional:\n${constraints}\n`
     : "";
 
   // Specific ending instruction injected directly into act3 guidance
   const endingHint = opts.ending && opts.ending !== "Any"
-    ? ` The ending type is "${opts.ending}" — Act III must deliver this.`
+    ? ` The ending type MUST be "${opts.ending}" — Act III must unambiguously deliver this.`
     : "";
 
   // Era hint for setting/world flavour
   const eraHint = opts.era && opts.era !== "Any"
-    ? ` The story is set in the "${opts.era}" era — reflect this in the world and language.`
+    ? ` The story is set in the "${opts.era}" era — every act must authentically reflect the language, technology, and culture of this era.`
     : "";
 
-  return `Create a compelling story concept based on this idea: "${userInput}"${constraintBlock}${eraHint}
+  // Genre enforcement in the story body
+  const genreHint = opts.genre && opts.genre !== "None"
+    ? ` This is a ${opts.genre} story — every act, the premise, the logline, and the theme must be distinctly ${opts.genre} in tone, stakes, and vocabulary.`
+    : "";
+
+  // Tone enforcement
+  const toneHint = opts.tone && opts.tone !== "Any"
+    ? ` The tone throughout must be "${opts.tone}" — reflect this in every sentence of every act.`
+    : "";
+
+  // Audience enforcement
+  const audienceHint = opts.audience && opts.audience !== "Any"
+    ? ` The story is for: ${opts.audience} — keep all content appropriate for this audience.`
+    : "";
+
+  return `Create a compelling story concept based on this user-provided idea: "${userInput}"${constraintBlock}${genreHint}${toneHint}${eraHint}${audienceHint}
+
+GROUNDING RULE: The characters, events, and locations you name in the acts will be used as the authoritative source of truth for the characters and world-building sections that follow. Be specific — name your protagonist, antagonist, and key supporting characters inside the acts. Do not use placeholder names like "the hero" — use real character names.
 
 Return ONLY this JSON (no extra text):
 {
@@ -76,9 +99,9 @@ Return ONLY this JSON (no extra text):
   "logline": "One sentence that hooks you immediately — the concept + conflict + stakes",
   "premise": "2-3 sentences expanding the logline into a full concept",
   "acts": {
-    "act1": "Setup: who, where, what triggers the story (2-3 sentences)",
-    "act2": "Conflict: the central struggle, complications, turning points (3-4 sentences)",
-    "act3": "Resolution: how it ends — satisfying but not predictable (2-3 sentences).${endingHint}"
+    "act1": "Setup: who (use real character names), where, what triggers the story (2-3 sentences)",
+    "act2": "Conflict: the central struggle, complications, turning points — reference named characters (3-4 sentences)",
+    "act3": "Resolution: how it ends — satisfying but not predictable — reference named characters (2-3 sentences).${endingHint}"
   },
   "theme": "The central question or truth this story explores (one sentence)",
   "tone": "The emotional register — specific and vivid (e.g. dark and suspenseful, whimsical and hopeful)"
@@ -94,24 +117,47 @@ export function characterPrompt(story: StoryOutline, opts: StoryOptions): string
   const audienceNote = opts.audience && opts.audience !== "Any"
     ? `\nAudience: ${opts.audience} — keep content appropriate.`
     : "";
+  const genreNote = opts.genre && opts.genre !== "None"
+    ? `\nGenre: ${opts.genre} — character archetypes, motivations, and voices must feel unmistakably ${opts.genre}.`
+    : "";
+  const toneNote = opts.tone && opts.tone !== "Any"
+    ? `\nTone: ${opts.tone} — each character's backstory, flaw, and quote must reflect this tone.`
+    : "";
+  const eraNote = opts.era && opts.era !== "Any"
+    ? `\nEra: ${opts.era} — character backgrounds, occupations, and speech must be authentic to this era.`
+    : "";
 
-  return `Based on this story, create 3 compelling characters:
+  return `Based on this story, create exactly 3 compelling characters.
 
-Story: "${story.title}" — ${story.logline}
+══ STORY CONTEXT (authoritative — do not contradict) ══
+Title: "${story.title}"
+Logline: ${story.logline}
 Premise: ${story.premise}
+
+Act I (Setup):      ${story.acts.act1}
+Act II (Conflict):  ${story.acts.act2}
+Act III (Resolution): ${story.acts.act3}
+
 Theme: ${story.theme}
-Tone: ${story.tone}${scopeNote}${audienceNote}
+Tone:  ${story.tone}${genreNote}${toneNote}${scopeNote}${audienceNote}${eraNote}
+
+══ STRICT RULES ══
+1. The 3 characters you create MUST be the actual named people who appear in the acts above. Read the acts carefully and extract the real character names from them.
+2. Do NOT invent new names that do not appear in the acts. Do NOT rename characters.
+3. Each character's backstory, motivation, and fatal flaw must be consistent with what happens to them in the acts.
+4. Assign roles accurately: the person the story centres on is "Protagonist"; the primary opposing force is "Antagonist"; close allies are "Ally" or "Mentor"; unpredictable characters are "Wildcard".
+5. The definingQuote must sound like something THIS character — given their specific backstory and arc — would actually say. It must reflect the story's tone.
 
 Return ONLY this JSON (an array of exactly 3 characters):
 [
   {
-    "name": "Full name",
-    "role": "Their role (e.g. Protagonist, Antagonist, Ally, Mentor, Wildcard)",
-    "physicalDescription": "2 vivid sentences — distinctive appearance, not generic",
-    "backstory": "3 sentences — formative experience that explains who they are today",
-    "motivation": "What they want more than anything — specific, not vague",
-    "fatalFlaw": "The internal weakness that will cause them problems — specific",
-    "definingQuote": "One line of dialogue that captures their voice and worldview"
+    "name": "Full name — must match a name from the acts above",
+    "role": "Their role (Protagonist | Antagonist | Ally | Mentor | Wildcard)",
+    "physicalDescription": "2 vivid sentences — distinctive appearance that fits the story's genre and era, not generic",
+    "backstory": "3 sentences — formative experience that explains who they are today, consistent with the acts",
+    "motivation": "What they want more than anything — specific, tied to the story events above",
+    "fatalFlaw": "The internal weakness that creates problems for them in the acts — specific",
+    "definingQuote": "One line of dialogue that captures their voice, worldview, and the story's tone"
   }
 ]`;
 }
@@ -123,25 +169,59 @@ export function worldPrompt(
   characters: Character[],
   opts: StoryOptions
 ): string {
-  const charNames = characters.map((c) => c.name).join(", ");
+  // Find protagonist for grounding — prefer role match, fall back to index 0
+  const protagonist = characters.find(
+    (c) => c.role.toLowerCase().includes("protagonist")
+  ) ?? characters[0];
+
+  const charSummaries = characters
+    .map((c) => `  - ${c.name} (${c.role}): ${c.motivation}`)
+    .join("\n");
+
   const eraNote = opts.era && opts.era !== "Any"
-    ? `\nEra: ${opts.era}` : "";
+    ? `\nEra: ${opts.era} — all geography, architecture, technology, and culture MUST authentically reflect this era.`
+    : "";
   const toneNote = opts.tone && opts.tone !== "Any"
-    ? `\nMood: ${opts.tone}` : "";
+    ? `\nMood: ${opts.tone} — the world's atmosphere, dangers, and sensory details must embody this tone.`
+    : "";
+  const genreNote = opts.genre && opts.genre !== "None"
+    ? `\nGenre: ${opts.genre} — the world's rules, culture, and geography must feel distinctly ${opts.genre}.`
+    : "";
+  const audienceNote = opts.audience && opts.audience !== "Any"
+    ? `\nAudience: ${opts.audience} — keep world details appropriate.`
+    : "";
 
-  return `Build the world for this story:
+  return `Build the world for this story.
 
-Story: "${story.title}" — ${story.logline}
-Characters: ${charNames}
-Tone: ${story.tone}${eraNote}${toneNote}
+══ STORY CONTEXT (authoritative — do not contradict) ══
+Title: "${story.title}"
+Logline: ${story.logline}
+
+Act I (Setup):        ${story.acts.act1}
+Act II (Conflict):    ${story.acts.act2}
+Act III (Resolution): ${story.acts.act3}
+
+Theme: ${story.theme}
+Tone:  ${story.tone}
+
+Characters in this world:
+${charSummaries}
+
+Protagonist: ${protagonist.name}${genreNote}${toneNote}${eraNote}${audienceNote}
+
+══ STRICT RULES ══
+1. The setting name, geography, and culture must be consistent with the locations and events described in the acts above.
+2. The "rulesOrSystem" must explain the specific mechanics (magic, technology, political structure, or physical laws) that drive the conflict in Act II.
+3. All character names referenced in the world description must exactly match the names from the acts and character list above — do not invent new names.
+4. The atmosphere must match the story's tone exactly: "${story.tone}".
 
 Return ONLY this JSON:
 {
-  "settingName": "The name of this world, city, era, or realm",
-  "geography": "2-3 sentences: the physical environment — landscape, climate, architecture, sensory details",
-  "rulesOrSystem": "2-3 sentences: what makes this world unique — its magic system, technology, political structure, or physical laws",
-  "culturalFlavor": "2-3 sentences: the culture, society, customs, values — what daily life feels like here",
-  "atmosphere": "One sentence capturing the dominant mood and feel of this world"
+  "settingName": "The name of this world, city, era, or realm — consistent with the acts",
+  "geography": "2-3 sentences: the physical environment — landscape, climate, architecture, sensory details that appear in the story",
+  "rulesOrSystem": "2-3 sentences: what makes this world unique — the specific system (magic, technology, political structure, or physical laws) that creates the conflict in the acts",
+  "culturalFlavor": "2-3 sentences: the culture, society, customs, values — what daily life feels like for characters like ${protagonist.name}",
+  "atmosphere": "One sentence capturing the dominant mood that permeates the story — must match tone: ${story.tone}"
 }`;
 }
 
@@ -160,28 +240,61 @@ export function artPromptGenerator(
   world: WorldBuilding,
   opts: StoryOptions
 ): string {
-  const protagonist = characters[0];
-  return `Create 4 cinematic image prompts for this story. These will be used to generate concept art.
+  // Find protagonist by role first — do NOT blindly use index 0
+  const protagonist = characters.find(
+    (c) => c.role.toLowerCase().includes("protagonist")
+  ) ?? characters[0];
 
-Story: "${story.title}" — ${story.logline}
+  // Find antagonist for a richer image 4
+  const antagonist = characters.find(
+    (c) => c.role.toLowerCase().includes("antagonist")
+  );
+
+  const genreStyleNote = opts.genre && opts.genre !== "None"
+    ? `\nThe art style must feel unmistakably ${opts.genre} — use genre-specific visual language, color palettes, and mood.`
+    : "";
+
+  const toneColorNote = opts.tone && opts.tone !== "Any"
+    ? `\nOverall color palette and lighting must reflect the tone: "${opts.tone}".`
+    : "";
+
+  const eraVisualNote = opts.era && opts.era !== "Any"
+    ? `\nArchitecture, clothing, technology, and props must visually match the era: "${opts.era}".`
+    : "";
+
+  return `Create 4 cinematic image prompts for this story. These will be fed directly to an AI image generator (FLUX model).
+
+══ STORY CONTEXT ══
+Title: "${story.title}"
+Logline: ${story.logline}
 Setting: ${world.settingName} — ${world.atmosphere}
 Protagonist: ${protagonist.name} — ${protagonist.physicalDescription}
-Tone: ${story.tone}
+${antagonist ? `Antagonist: ${antagonist.name} — ${antagonist.physicalDescription}` : ""}
+Act I:   ${story.acts.act1}
+Act II:  ${story.acts.act2}
+Act III: ${story.acts.act3}
+Tone: ${story.tone}${genreStyleNote}${toneColorNote}${eraVisualNote}
 
-The 4 images should be:
-1. An establishing scene — the world, a key moment, cinematic and wide
-2. The protagonist ${protagonist.name} — a character portrait
-3. The world/environment — a location or landscape from the story
-4. A mood/thematic image — abstract, emotional, symbolic
+══ STRICT RULES ══
+1. Every prompt must reference real names, locations, and events from the story context above — no generic placeholders.
+2. The protagonist in image 2 MUST be ${protagonist.name} using the physical description above.
+3. The setting in image 3 MUST be from ${world.settingName} as described in the acts.
+4. All 4 images must feel like they belong to the SAME story — consistent visual language, palette, and mood.
+
+The 4 images must be:
+1. An establishing scene — a key cinematic moment from the acts, wide shot, shows the world
+2. A character portrait of ${protagonist.name} — based on their physical description above, in their world
+3. A key location from ${world.settingName} — a specific place mentioned in the acts
+4. A thematic/mood image — symbolic, abstract, capturing the theme: "${story.theme}"
 
 Return ONLY this JSON (array of exactly 4 strings):
 [
-  "prompt for image 1 — establishing scene (detailed, cinematic, specific art style, lighting)",
-  "prompt for image 2 — character portrait of ${protagonist.name} (detailed physical description, setting, mood)",
-  "prompt for image 3 — environment/location from ${world.settingName} (architecture, landscape, atmosphere)",
-  "prompt for image 4 — thematic/mood image capturing '${story.theme}' (symbolic, atmospheric)"
+  "prompt for image 1 — establishing scene: a specific moment from the acts, cinematic wide shot, lighting style, color palette matching tone, hyperdetailed concept art",
+  "prompt for image 2 — portrait of ${protagonist.name}: [their physical description], setting from ${world.settingName}, mood matching '${story.tone}', hyperdetailed, dramatic lighting",
+  "prompt for image 3 — key location in ${world.settingName}: specific place from the acts, architectural/landscape details, atmosphere matching '${story.tone}', concept art quality",
+  "prompt for image 4 — thematic mood image for '${story.theme}': symbolic composition, color palette matching tone '${story.tone}', atmospheric, painterly"
 ]
 
-Each prompt must be 2-4 sentences. Include: subject, setting, lighting style, color palette, and cinematic quality descriptors. Reference character names and setting names from the story.`;
-  void opts; // opts not used in art prompts — genre/tone handled by replicate.ts
+Each prompt must be 2-4 sentences. Always include: specific subject, named setting, lighting style, color palette, and quality descriptors (hyperdetailed, 8K, concept art, cinematic).`;
+  void opts; // genre/tone handled above via notes; replicate.ts also applies genre style
 }
