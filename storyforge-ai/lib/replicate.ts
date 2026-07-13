@@ -36,16 +36,21 @@ export async function pollinationsImage(
   genre?: string,
   tone?: string
 ): Promise<string> {
-  void index; void genre; void tone;
+  void genre; void tone;
 
   const encoded = encodeURIComponent(stylePrompt(prompt));
   const seed = Math.floor(Math.random() * 9_999_999);
   const url = `${POLLINATIONS_BASE}/${encoded}?width=768&height=768&model=flux&nologo=true&seed=${seed}`;
 
+  console.log(`[image ${index + 1}] starting — ${prompt.slice(0, 60)}`);
+  const t0 = Date.now();
+
   const res = await fetchWithRetry(url);
   if (!res.ok) throw new Error(`Pollinations ${res.status} for: ${prompt.slice(0, 60)}`);
 
   const buffer = await res.arrayBuffer();
+  console.log(`[image ${index + 1}] done in ${Date.now() - t0}ms (${buffer.byteLength} bytes)`);
+
   const base64 = Buffer.from(buffer).toString("base64");
   const contentType = res.headers.get("content-type") || "image/jpeg";
   return `data:${contentType};base64,${base64}`;

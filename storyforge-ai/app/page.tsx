@@ -27,6 +27,8 @@ export default function Home() {
   const [deck, setDeck] = useState<Partial<PitchDeck> | null>(null);
   const [dark, setDark] = useState(false);
   const [regenerating, setRegenerating] = useState<RegeneratingSection>(null);
+  const [imageProgress, setImageProgress] = useState(0);
+  const [imageErrors, setImageErrors] = useState<(string | null)[]>([null, null, null, null]);
   // Demo deck is expanded by default so judges see output immediately
   const [demoOpen, setDemoOpen] = useState(true);
   // Holds the AbortController for the currently running generation so a
@@ -59,6 +61,8 @@ export default function Home() {
     setStep("story");
     setError(null);
     setDeck(null);
+    setImageProgress(0);
+    setImageErrors([null, null, null, null]);
 
     try {
       // ── Text generation ──────────────────────────────────────────────────
@@ -152,6 +156,7 @@ export default function Home() {
       const fetchAllImages = async () => {
         const urls: (string | null)[] = [null, null, null, null];
         for (let i = 0; i < (imagePrompts as string[]).length; i++) {
+          setImageProgress(i + 1);
           try {
             const imgRes = await fetch("/api/images", {
               method: "POST",
@@ -170,7 +175,12 @@ export default function Home() {
               setDeck((prev) => prev ? { ...prev, imageUrls: snapshot } : null);
             }
           } catch {
-            // Non-fatal — continue to next image
+            // Non-fatal — mark error for this slot and continue to next image
+            setImageErrors((prev) => {
+              const next = [...prev];
+              next[i] = "Failed to generate";
+              return next;
+            });
           }
         }
       };
@@ -297,6 +307,50 @@ export default function Home() {
     setDeck((prev) => prev ? { ...prev, actAudioUrls: results } : null);
   };
 
+  // ── Retry a single failed image slot ────────────────────────────────────────
+  const handleRetryImage = async (index: number) => {
+    if (!deck?.imagePrompts) return;
+    // Clear the error for this slot so the skeleton shows while retrying
+    setImageErrors((prev) => {
+      const next = [...prev];
+      next[index] = null;
+      return next;
+    });
+    try {
+      const imgRes = await fetch("/api/images", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: (deck.imagePrompts as string[])[index],
+          index,
+          genre: options.genre !== "None" ? options.genre : undefined,
+          tone:  options.tone  !== "Any"  ? options.tone  : undefined,
+        }),
+      });
+      if (imgRes.ok) {
+        const { imageUrl } = await imgRes.json();
+        setDeck((prev) => {
+          if (!prev) return prev;
+          const updated = [...(prev.imageUrls ?? [])];
+          updated[index] = imageUrl;
+          return { ...prev, imageUrls: updated.filter(Boolean) as string[] };
+        });
+      } else {
+        setImageErrors((prev) => {
+          const next = [...prev];
+          next[index] = "Failed to generate";
+          return next;
+        });
+      }
+    } catch {
+      setImageErrors((prev) => {
+        const next = [...prev];
+        next[index] = "Failed to generate";
+        return next;
+      });
+    }
+  };
+
   const isLoading = step !== "idle" && step !== "done" && step !== "error";
   const isDone    = step === "done";
   const hasText   = deck?.story && deck?.characters && deck?.world;
@@ -399,7 +453,7 @@ export default function Home() {
         {/* ── Loading pipeline ──────────────────────────────────────────── */}
         {isLoading && (
           <div className="rounded-xl border border-border/40 bg-muted/20 px-5 mb-8 max-w-2xl mx-auto">
-            <LoadingPipeline currentStep={step} />
+            <LoadingPipeline currentStep={step} imageProgress={imageProgress} />
           </div>
         )}
 
@@ -461,6 +515,8 @@ export default function Home() {
                 <ArtGrid
                   imageUrls={deck.imageUrls ?? []}
                   isLoading={step === "audio" || step === "images"}
+                  imageErrors={imageErrors}
+                  onRetry={handleRetryImage}
                 />
               </>
             )}

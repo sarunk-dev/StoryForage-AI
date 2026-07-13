@@ -1,10 +1,12 @@
 "use client";
 
-import { Palette } from "lucide-react";
+import { Palette, RefreshCw } from "lucide-react";
 
 interface ArtGridProps {
   imageUrls: string[];
   isLoading?: boolean;
+  imageErrors?: (string | null)[];
+  onRetry?: (index: number) => void;
 }
 
 const IMAGE_LABELS = [
@@ -26,7 +28,32 @@ function ImageSkeleton({ label, index }: { label: string; index: number }) {
   );
 }
 
-export function ArtGrid({ imageUrls, isLoading }: ArtGridProps) {
+function ImageErrorCard({
+  label,
+  index,
+  onRetry,
+}: {
+  label: string;
+  index: number;
+  onRetry?: (index: number) => void;
+}) {
+  return (
+    <div className="aspect-square rounded-xl border border-border/50 bg-muted/20 flex flex-col items-center justify-center gap-3 p-4">
+      <span className="text-[10px] text-muted-foreground/40 font-medium text-center">{label}</span>
+      <button
+        onClick={() => onRetry?.(index)}
+        className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground
+                   border border-border/50 rounded-lg px-3 py-1.5
+                   hover:border-primary/40 hover:text-primary transition-colors"
+      >
+        <RefreshCw className="w-3 h-3" />
+        Retry
+      </button>
+    </div>
+  );
+}
+
+export function ArtGrid({ imageUrls, isLoading, imageErrors, onRetry }: ArtGridProps) {
   return (
     <section className="space-y-5">
       <div className="flex items-center gap-2 section-label">
@@ -67,6 +94,12 @@ export function ArtGrid({ imageUrls, isLoading }: ArtGridProps) {
                   </span>
                 </div>
               </div>
+            );
+          }
+
+          if (isLoading && imageErrors?.[idx]) {
+            return (
+              <ImageErrorCard key={idx} label={label} index={idx} onRetry={onRetry} />
             );
           }
 

@@ -7,11 +7,12 @@ import { Check, Loader2 } from "lucide-react";
 
 interface LoadingPipelineProps {
   currentStep: GenerationStep;
+  imageProgress?: number;
 }
 
 const STEP_KEYS = GENERATION_STEPS.map((s) => s.key);
 
-export function LoadingPipeline({ currentStep }: LoadingPipelineProps) {
+export function LoadingPipeline({ currentStep, imageProgress = 0 }: LoadingPipelineProps) {
   if (currentStep === "idle" || currentStep === "done") return null;
 
   const currentIndex = STEP_KEYS.indexOf(currentStep);
@@ -56,7 +57,11 @@ export function LoadingPipeline({ currentStep }: LoadingPipelineProps) {
                   <span className="w-1 h-1 rounded-full bg-current" />
                 )}
               </span>
-              <span className={isActive ? "font-medium" : ""}>{step.label}</span>
+              <span className={isActive ? "font-medium" : ""}>
+                {step.key === "images" && isActive && imageProgress > 0
+                  ? `Generating concept art (${imageProgress} of 4)`
+                  : step.label}
+              </span>
             </div>
           );
         })}
