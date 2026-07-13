@@ -367,6 +367,6 @@ ${slotInstructions[index]}
 2. Include: specific subject, named setting, lighting style, color palette, and quality descriptors (hyperdetailed, 8K, concept art, cinematic).
 3. The prompt must be 2–4 sentences.
 
-Return ONLY a single JSON string — no array, no markdown, no explanation. Example format:
+Return ONLY a single JSON string value — NOT an object, NOT an array, NOT wrapped in a key. Just the quoted string itself, starting with " and ending with ". Example of the exact format required:
 "A lone warrior standing on the cliffs of Ashenveil, golden-hour light cutting through storm clouds, muted earth tones and deep crimson, hyperdetailed concept art, cinematic."`;
 }

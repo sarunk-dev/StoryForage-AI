@@ -109,11 +109,25 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const imagePrompt = await generateJSON<string>(
+      const raw = await generateJSON<unknown>(
         singleArtPrompt(index, story, characters, world, opts),
         sys,
         { maxTokens: 256, signal }
       );
+
+      // Granite sometimes wraps the string in an object e.g. { "prompt": "..." }
+      // or { "imagePrompt": "..." } — unwrap to a plain string defensively.
+      let imagePrompt: string;
+      if (typeof raw === "string") {
+        imagePrompt = raw;
+      } else if (raw && typeof raw === "object") {
+        const obj = raw as Record<string, unknown>;
+        const val = obj.prompt ?? obj.imagePrompt ?? obj.image_prompt ?? Object.values(obj)[0];
+        imagePrompt = typeof val === "string" ? val : JSON.stringify(val);
+      } else {
+        imagePrompt = String(raw);
+      }
+
       return NextResponse.json({ imagePrompt });
     }
 

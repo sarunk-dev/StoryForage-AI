@@ -88,6 +88,8 @@ export function ArtGrid({
           const url = imageUrls[idx];
           const isThisRegenerating = regeneratingIndex === idx;
 
+          const hasPreviousUrl = !!previousImageUrls?.[idx];
+
           if (url) {
             return (
               <div
@@ -122,16 +124,57 @@ export function ArtGrid({
                   </div>
                 )}
 
-                {/* Hover overlay — gradient + label (bottom) + Regenerate button (top-right) */}
+                {/* Hover overlay — gradient + label/rollback strip (bottom) + Regenerate button (top-right) */}
                 {!isThisRegenerating && (
                   <>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    {/* Gradient — always visible when rollback strip is showing */}
+                    <div className={[
+                      "absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent transition-opacity duration-300",
+                      hasPreviousUrl ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+                    ].join(" ")} />
 
-                    {/* Bottom label */}
-                    <div className="absolute bottom-0 left-0 right-0 p-2.5 translate-y-1 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                      <span className="text-[10px] font-semibold text-white tracking-wide uppercase">
-                        {label}
-                      </span>
+                    {/* Bottom strip — switches between plain label and rollback controls */}
+                    <div className={[
+                      "absolute bottom-0 left-0 right-0 transition-all duration-300",
+                      hasPreviousUrl
+                        ? "opacity-100 translate-y-0"
+                        : "opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0",
+                    ].join(" ")}>
+                      {hasPreviousUrl ? (
+                        /* Rollback strip — always visible until user decides */
+                        <div className="flex items-center gap-1.5 px-2.5 py-2">
+                          <span className="text-[9px] font-semibold text-white/60 tracking-wide uppercase flex-1 truncate">
+                            {label}
+                          </span>
+                          <button
+                            onClick={() => onRollback?.(idx)}
+                            title="Roll back to previous"
+                            className="flex items-center gap-1 text-[10px] font-medium text-white/80
+                                       bg-white/15 hover:bg-white/25 border border-white/20 hover:border-white/40
+                                       rounded px-2 py-1 transition-colors"
+                          >
+                            <Undo2 className="w-2.5 h-2.5" />
+                            Roll back
+                          </button>
+                          <button
+                            onClick={() => onKeep?.(idx)}
+                            title="Keep new version"
+                            className="flex items-center gap-1 text-[10px] font-semibold text-white
+                                       bg-primary/70 hover:bg-primary/90 border border-primary/50
+                                       rounded px-2 py-1 transition-colors"
+                          >
+                            <Check className="w-2.5 h-2.5" />
+                            Keep
+                          </button>
+                        </div>
+                      ) : (
+                        /* Normal hover — just the label */
+                        <div className="p-2.5">
+                          <span className="text-[10px] font-semibold text-white tracking-wide uppercase">
+                            {label}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Top-right Regenerate button */}
@@ -171,39 +214,6 @@ export function ArtGrid({
           return null;
         })}
       </div>
-
-      {/* Per-slot rollback banners — shown below the grid after a successful regen */}
-      {IMAGE_LABELS.map((label, idx) =>
-        previousImageUrls?.[idx] ? (
-          <div
-            key={idx}
-            className="flex items-center gap-2 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2
-                       animate-in fade-in slide-in-from-top-1 duration-200"
-          >
-            <span className="text-[11px] text-muted-foreground flex-1">
-              <span className="font-medium text-foreground/70">{label}</span> updated — keep it or roll back to the previous version.
-            </span>
-            <button
-              onClick={() => onRollback?.(idx)}
-              className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground/70
-                         hover:text-foreground border border-border/50 hover:border-border
-                         rounded-md px-2.5 py-1 transition-colors"
-            >
-              <Undo2 className="w-3 h-3" />
-              Roll back
-            </button>
-            <button
-              onClick={() => onKeep?.(idx)}
-              className="flex items-center gap-1 text-[11px] font-semibold text-primary
-                         hover:text-primary/80 border border-primary/30 hover:border-primary/50
-                         bg-primary/8 hover:bg-primary/12 rounded-md px-2.5 py-1 transition-colors"
-            >
-              <Check className="w-3 h-3" />
-              Keep new
-            </button>
-          </div>
-        ) : null
-      )}
 
       <p className="text-[11px] text-muted-foreground/40 text-center">
         FLUX · Pollinations AI
