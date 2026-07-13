@@ -298,3 +298,75 @@ Return ONLY this JSON (array of exactly 4 strings):
 Each prompt must be 2-4 sentences. Always include: specific subject, named setting, lighting style, color palette, and quality descriptors (hyperdetailed, 8K, concept art, cinematic).`;
   void opts; // genre/tone handled above via notes; replicate.ts also applies genre style
 }
+
+// ── Step 4b: Single art prompt (for per-image regeneration) ──────────────────
+// Asks Granite to produce exactly ONE image prompt for the given slot index,
+// using the current story/characters/world so the result is always in sync.
+
+const SLOT_ROLES = [
+  "An establishing scene — a key cinematic moment from the acts, wide shot, shows the world",
+  "A character portrait of the protagonist — based on their physical description, in their world",
+  "A key location from the world's setting — a specific place mentioned in the acts",
+  "A thematic/mood image — symbolic, abstract, capturing the central theme of the story",
+] as const;
+
+export function singleArtPrompt(
+  index: number,
+  story: StoryOutline,
+  characters: Character[],
+  world: WorldBuilding,
+  opts: StoryOptions
+): string {
+  const protagonist = characters.find(
+    (c) => c.role.toLowerCase().includes("protagonist")
+  ) ?? characters[0];
+
+  const antagonist = characters.find(
+    (c) => c.role.toLowerCase().includes("antagonist")
+  );
+
+  const genreStyleNote = opts.genre && opts.genre !== "None"
+    ? `\nThe art style must feel unmistakably ${opts.genre} — use genre-specific visual language, color palettes, and mood.`
+    : "";
+
+  const toneColorNote = opts.tone && opts.tone !== "Any"
+    ? `\nOverall color palette and lighting must reflect the tone: "${opts.tone}".`
+    : "";
+
+  const eraVisualNote = opts.era && opts.era !== "Any"
+    ? `\nArchitecture, clothing, technology, and props must visually match the era: "${opts.era}".`
+    : "";
+
+  // Per-slot specific instruction with live data embedded
+  const slotInstructions = [
+    `An establishing scene — pick a specific cinematic moment from the acts below, wide shot, shows the world of ${world.settingName}`,
+    `A character portrait of ${protagonist.name} — use this exact physical description: "${protagonist.physicalDescription}" — place them in ${world.settingName}, mood matching "${story.tone}"`,
+    `A key location in ${world.settingName} — pick a specific place mentioned in the acts, show its architecture/landscape, atmosphere matching "${story.tone}"`,
+    `A thematic mood image for the theme "${story.theme}" — symbolic composition, color palette matching tone "${story.tone}", atmospheric, painterly`,
+  ];
+
+  return `Create ONE cinematic image prompt for this story. This prompt will be fed directly to an AI image generator (FLUX model).
+
+══ STORY CONTEXT ══
+Title: "${story.title}"
+Logline: ${story.logline}
+Setting: ${world.settingName} — ${world.atmosphere}
+Protagonist: ${protagonist.name} — ${protagonist.physicalDescription}
+${antagonist ? `Antagonist: ${antagonist.name} — ${antagonist.physicalDescription}` : ""}
+Act I:   ${story.acts.act1}
+Act II:  ${story.acts.act2}
+Act III: ${story.acts.act3}
+Theme: ${story.theme}
+Tone: ${story.tone}${genreStyleNote}${toneColorNote}${eraVisualNote}
+
+══ IMAGE TO PRODUCE ══
+${slotInstructions[index]}
+
+══ RULES ══
+1. Reference real names, locations, and events from the story context above — no generic placeholders.
+2. Include: specific subject, named setting, lighting style, color palette, and quality descriptors (hyperdetailed, 8K, concept art, cinematic).
+3. The prompt must be 2–4 sentences.
+
+Return ONLY a single JSON string — no array, no markdown, no explanation. Example format:
+"A lone warrior standing on the cliffs of Ashenveil, golden-hour light cutting through storm clouds, muted earth tones and deep crimson, hyperdetailed concept art, cinematic."`;
+}

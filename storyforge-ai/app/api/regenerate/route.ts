@@ -5,6 +5,7 @@ import {
   storyPrompt,
   characterPrompt,
   worldPrompt,
+  singleArtPrompt,
 } from "@/lib/prompts";
 import type {
   StoryOutline,
@@ -33,10 +34,12 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { target, prompt } = body as {
-      target: "story" | "characters" | "world";
+      target: "story" | "characters" | "world" | "imagePrompt";
       prompt: string;
       story?: StoryOutline;
       characters?: Character[];
+      world?: WorldBuilding;
+      index?: number;
       options?: Partial<StoryOptions>;
     };
 
@@ -85,6 +88,33 @@ export async function POST(req: NextRequest) {
         { maxTokens: 1024, signal }
       );
       return NextResponse.json({ world });
+    }
+
+    if (target === "imagePrompt") {
+      const story      = body.story      as StoryOutline;
+      const characters = body.characters as Character[];
+      const world      = body.world      as WorldBuilding;
+      const index      = body.index      as number;
+
+      if (!story || !characters || !world) {
+        return NextResponse.json(
+          { error: "story, characters, and world are required for target=imagePrompt" },
+          { status: 400 }
+        );
+      }
+      if (index === undefined || index < 0 || index > 3) {
+        return NextResponse.json(
+          { error: "index must be 0–3 for target=imagePrompt" },
+          { status: 400 }
+        );
+      }
+
+      const imagePrompt = await generateJSON<string>(
+        singleArtPrompt(index, story, characters, world, opts),
+        sys,
+        { maxTokens: 256, signal }
+      );
+      return NextResponse.json({ imagePrompt });
     }
 
     return NextResponse.json({ error: `Unknown target: ${target}` }, { status: 400 });

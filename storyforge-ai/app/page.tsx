@@ -36,6 +36,10 @@ export default function Home() {
   } | null>(null);
   const [imageProgress, setImageProgress] = useState(0);
   const [imageErrors, setImageErrors] = useState<(string | null)[]>([null, null, null, null]);
+  // Per-slot index of the image currently being regenerated (null = none)
+  const [regeneratingImageIndex, setRegeneratingImageIndex] = useState<number | null>(null);
+  // One-level-deep URL snapshot per slot for image rollback
+  const [previousImageUrls, setPreviousImageUrls] = useState<(string | null)[]>([null, null, null, null]);
   // Demo deck is expanded by default so judges see output immediately
   const [demoOpen, setDemoOpen] = useState(true);
   // Holds the AbortController for the currently running generation so a
@@ -71,6 +75,7 @@ export default function Home() {
     setPreviousVersions(null);
     setImageProgress(0);
     setImageErrors([null, null, null, null]);
+    setPreviousImageUrls([null, null, null, null]);
 
     try {
       // ── Text generation ──────────────────────────────────────────────────
@@ -390,6 +395,100 @@ export default function Home() {
     }
   };
 
+  // ── Per-image regenerate handler ─────────────────────────────────────────────
+  // Step 1: ask Granite for a fresh art prompt (in sync with current deck state)
+  // Step 2: send that prompt to /api/images (FLUX) for the new image
+  // Snapshot the old URL first so the user can roll back.
+  const handleRegenerateImage = async (index: number) => {
+    if (!deck?.story || !deck?.characters || !deck?.world || regeneratingImageIndex !== null) return;
+
+    // Snapshot old URL for rollback — imageUrls is a dense filtered array so
+    // access by index may be undefined if that slot hasn't loaded yet
+    const oldUrl = (deck.imageUrls ?? [])[index] ?? null;
+    setRegeneratingImageIndex(index);
+
+    try {
+      // Step 1 — Granite writes a fresh art prompt for this slot
+      const regenRes = await fetch("/api/regenerate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          target: "imagePrompt",
+          prompt,       // original user prompt for system context
+          index,
+          story:      deck.story,
+          characters: deck.characters,
+          world:      deck.world,
+          options,
+        }),
+      });
+      if (!regenRes.ok) return;
+      const { imagePrompt: newPrompt } = await regenRes.json() as { imagePrompt: string };
+
+      // Persist the updated prompt in deck so a future re-regen uses the latest
+      setDeck((prev) => {
+        if (!prev) return prev;
+        const updatedPrompts = [...((prev.imagePrompts ?? []) as string[])];
+        updatedPrompts[index] = newPrompt;
+        return { ...prev, imagePrompts: updatedPrompts };
+      });
+
+      // Step 2 — FLUX generates the new image
+      const imgRes = await fetch("/api/images", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: newPrompt,
+          index,
+          genre: options.genre !== "None" ? options.genre : undefined,
+          tone:  options.tone  !== "Any"  ? options.tone  : undefined,
+        }),
+      });
+      if (!imgRes.ok) return;
+      const { imageUrl } = await imgRes.json() as { imageUrl: string };
+
+      // Commit new image and expose rollback for the old one
+      setPreviousImageUrls((prev) => {
+        const next = [...prev];
+        next[index] = oldUrl;
+        return next;
+      });
+      setDeck((prev) => {
+        if (!prev) return prev;
+        // imageUrls is kept as a dense array indexed by slot
+        const updated = [...((prev.imageUrls ?? []) as string[])];
+        updated[index] = imageUrl;
+        return { ...prev, imageUrls: updated.filter(Boolean) as string[] };
+      });
+    } finally {
+      setRegeneratingImageIndex(null);
+    }
+  };
+
+  const handleRollbackImage = (index: number) => {
+    const oldUrl = previousImageUrls[index];
+    if (!oldUrl) return;
+    setDeck((prev) => {
+      if (!prev) return prev;
+      const updated = [...((prev.imageUrls ?? []) as string[])];
+      updated[index] = oldUrl;
+      return { ...prev, imageUrls: updated.filter(Boolean) as string[] };
+    });
+    setPreviousImageUrls((prev) => {
+      const next = [...prev];
+      next[index] = null;
+      return next;
+    });
+  };
+
+  const handleKeepImage = (index: number) => {
+    setPreviousImageUrls((prev) => {
+      const next = [...prev];
+      next[index] = null;
+      return next;
+    });
+  };
+
   const isLoading = step !== "idle" && step !== "done" && step !== "error";
   const isDone    = step === "done";
   const hasText   = deck?.story && deck?.characters && deck?.world;
@@ -531,7 +630,7 @@ export default function Home() {
               story={deck.story!}
               genre={options.genre}
               actAudioUrls={deck.actAudioUrls}
-              onRegenerate={isDone ? handleRegenerateStory : undefined}
+              onRegenerate={hasText ? handleRegenerateStory : undefined}
               isRegenerating={regenerating === "story"}
               onGenerateAudio={isDone ? () => handleGenerateAudio(deck.story!) : undefined}
               hasPrevious={!!previousVersions?.story}
@@ -541,7 +640,7 @@ export default function Home() {
             <Separator />
             <CharactersSection
               characters={deck.characters!}
-              onRegenerate={isDone ? handleRegenerateCharacters : undefined}
+              onRegenerate={hasText ? handleRegenerateCharacters : undefined}
               isRegenerating={regenerating === "characters"}
               hasPrevious={!!previousVersions?.characters}
               onRollback={handleRollbackCharacters}
@@ -550,7 +649,7 @@ export default function Home() {
             <Separator />
             <WorldSection
               world={deck.world!}
-              onRegenerate={isDone ? handleRegenerateWorld : undefined}
+              onRegenerate={hasText ? handleRegenerateWorld : undefined}
               isRegenerating={regenerating === "world"}
               hasPrevious={!!previousVersions?.world}
               onRollback={handleRollbackWorld}
@@ -565,6 +664,11 @@ export default function Home() {
                   isLoading={step === "audio" || step === "images"}
                   imageErrors={imageErrors}
                   onRetry={handleRetryImage}
+                  onRegenerate={isDone ? handleRegenerateImage : undefined}
+                  regeneratingIndex={regeneratingImageIndex}
+                  previousImageUrls={previousImageUrls}
+                  onRollback={handleRollbackImage}
+                  onKeep={handleKeepImage}
                 />
               </>
             )}

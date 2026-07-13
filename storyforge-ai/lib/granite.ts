@@ -82,12 +82,30 @@ export function parseJSON<T>(raw: string): T {
   const firstBrace = cleaned.search(/[{[]/);
   const lastBrace = Math.max(cleaned.lastIndexOf("}"), cleaned.lastIndexOf("]"));
 
-  if (firstBrace === -1 || lastBrace === -1) {
-    throw new Error(`No JSON found in response: ${cleaned.slice(0, 300)}`);
+  // Find first and last " — handles bare JSON string responses e.g. "A lone warrior..."
+  const firstQuote = cleaned.indexOf('"');
+  const lastQuote  = cleaned.lastIndexOf('"');
+
+  // Prefer object/array if present; fall back to bare string literal
+  if (firstBrace !== -1 && lastBrace !== -1) {
+    // If a quote starts before the brace, Granite may have wrapped the value in a
+    // string — try the string extraction first, then fall through to object/array
+    if (firstQuote !== -1 && firstQuote < firstBrace) {
+      try {
+        return JSON.parse(cleaned.slice(firstQuote, lastQuote + 1)) as T;
+      } catch {
+        // fall through to object/array parse
+      }
+    }
+    return JSON.parse(cleaned.slice(firstBrace, lastBrace + 1)) as T;
   }
 
-  const jsonStr = cleaned.slice(firstBrace, lastBrace + 1);
-  return JSON.parse(jsonStr) as T;
+  // No object or array found — try bare quoted string
+  if (firstQuote !== -1 && lastQuote > firstQuote) {
+    return JSON.parse(cleaned.slice(firstQuote, lastQuote + 1)) as T;
+  }
+
+  throw new Error(`No JSON found in response: ${cleaned.slice(0, 300)}`);
 }
 
 /**
@@ -106,7 +124,7 @@ export async function generateJSON<T>(
   } catch {
     const retryPrompt = `${userPrompt}
 
-IMPORTANT: Your previous response could not be parsed as JSON. Return ONLY valid JSON — no explanation, no markdown, no code fences. Start your response with { or [.`;
+IMPORTANT: Your previous response could not be parsed as JSON. Return ONLY valid JSON — no explanation, no markdown, no code fences. Start your response with {, [, or " (for a plain string value).`;
 
     const retryRaw = await generateText(retryPrompt, systemPrompt, options);
     return parseJSON<T>(retryRaw);
