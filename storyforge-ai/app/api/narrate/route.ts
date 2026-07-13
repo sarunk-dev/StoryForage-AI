@@ -82,6 +82,11 @@ function prepareNarrationText(rawText: string, actLabel: string, _tone: string):
 // the dev-mode implicit 10 s Node timeout that was silently killing act2/act3.
 export async function POST(req: NextRequest) {
   try {
+    // Fail fast if the API key is missing rather than sending "undefined" as the header value
+    if (!ELEVENLABS_API_KEY) {
+      return NextResponse.json({ error: "ELEVENLABS_API_KEY is not configured" }, { status: 500 });
+    }
+
     const { text, genre, actKey, tone } = (await req.json()) as {
       text: string;
       genre?: string;
@@ -100,7 +105,8 @@ export async function POST(req: NextRequest) {
     const profile       = GENRE_PROFILES[resolvedGenre] ?? GENRE_PROFILES["None"];
     const voice         = VOICES[profile.voiceKey] ?? VOICES["daniel"];
     const finalSettings = blendSettings(profile.settings, ACT_OVERLAYS[resolvedAct] ?? {});
-    const narrationText = prepareNarrationText(text, resolvedAct, resolvedTone);
+    // Silently truncate oversized act text (Granite-generated, not raw user input)
+    const narrationText = prepareNarrationText(text.slice(0, 4000), resolvedAct, resolvedTone);
 
     const ttsRes = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${voice.id}`,

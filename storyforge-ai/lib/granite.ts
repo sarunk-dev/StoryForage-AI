@@ -40,23 +40,34 @@ export async function generateText(
   const watsonx = getClient();
   const projectId = process.env.WATSONX_PROJECT_ID!;
 
-  // `signal` is a first-class param on all WatsonX SDK methods —
-  // validators.js line 30 includes it in commonParams, and vml_v1.js
-  // line 2226 wires it to axiosOptions internally. Passing it here causes
-  // Axios to abort the IBM HTTP call when the client disconnects, freeing
-  // the concurrent-request slot on the free-tier plan.
-  const response = await watsonx.textChat({
+  const params = {
     modelId: "ibm/granite-4-h-small",
     projectId,
     messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt },
+      { role: "system" as const, content: systemPrompt },
+      { role: "user"   as const, content: userPrompt   },
     ],
     maxTokens: options.maxTokens ?? 2048,
     temperature: 0.7,
     topP: 0.9,
     ...(options.signal ? { signal: options.signal } : {}),
-  });
+  };
+
+  // IBM free tier allows 2 concurrent requests. If we hit a 429 (rate limit),
+  // wait 700ms (the reset window is ~500ms per response headers) and retry once.
+  let response;
+  try {
+    response = await watsonx.textChat(params);
+  } catch (err: unknown) {
+    const status = (err as { status?: number; code?: number })?.status
+                ?? (err as { status?: number; code?: number })?.code;
+    if (status === 429) {
+      await new Promise((r) => setTimeout(r, 700));
+      response = await watsonx.textChat(params);
+    } else {
+      throw err;
+    }
+  }
 
   const content = response.result?.choices?.[0]?.message?.content;
   if (!content) {

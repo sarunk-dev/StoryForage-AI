@@ -49,6 +49,9 @@ export async function POST(req: NextRequest) {
     if (!prompt?.trim()) {
       return NextResponse.json({ error: "prompt is required" }, { status: 400 });
     }
+    if (prompt.trim().length > 2000) {
+      return NextResponse.json({ error: "Prompt too long (max 2000 characters)" }, { status: 400 });
+    }
 
     const opts: StoryOptions = { ...DEFAULT_OPTIONS, ...(body.options ?? {}) };
     const sys = systemPrompt(opts);

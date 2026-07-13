@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import type { StoryOutline } from "@/lib/types";
 import { BookOpen, Volume2, VolumeX, RefreshCw, Mic, Cpu, Undo2, Check } from "lucide-react";
@@ -21,6 +21,8 @@ interface StorySectionProps {
   hasPrevious?: boolean;
   onRollback?: () => void;
   onKeep?: () => void;
+  /** True when ANY regeneration operation is in flight — disables this button */
+  anyRegenInFlight?: boolean;
 }
 
 type ActKey = "act1" | "act2" | "act3";
@@ -28,6 +30,16 @@ type ActKey = "act1" | "act2" | "act3";
 function useActAudio(base64?: string) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playing, setPlaying] = useState(false);
+
+  // Stop and discard the audio element whenever base64 changes (audio regenerated)
+  // or when the component unmounts — prevents ghost audio playing in the background.
+  useEffect(() => {
+    return () => {
+      audioRef.current?.pause();
+      audioRef.current = null;
+      setPlaying(false);
+    };
+  }, [base64]);
 
   const toggle = () => {
     if (!base64) return;
@@ -87,7 +99,7 @@ function ActPlayer({ base64 }: ActPlayerProps) {
   );
 }
 
-export function StorySection({ story, genre, actAudioUrls, onRegenerate, isRegenerating, onGenerateAudio, hasPrevious, onRollback, onKeep }: StorySectionProps) {
+export function StorySection({ story, genre, actAudioUrls, onRegenerate, isRegenerating, onGenerateAudio, hasPrevious, onRollback, onKeep, anyRegenInFlight }: StorySectionProps) {
   const [generatingAudio, setGeneratingAudio] = useState(false);
 
   const handleGenerateAudio = async () => {
@@ -100,15 +112,15 @@ export function StorySection({ story, genre, actAudioUrls, onRegenerate, isRegen
     }
   };
 
-  // Show the "Regenerate Audio" button only after the user has regenerated the story
-  // (actAudioUrls will be an empty object {} at that point, not undefined).
-  // Once audio is generated it gets populated, so the button disappears again.
-  const audioWasCleared =
+  // Show the Generate Audio button whenever:
+  //   - onGenerateAudio is wired (hasText is true in the parent)
+  //   - AND no act has audio yet (first-run failure OR after story regen cleared audio)
+  // This is independent of image loading — audio and images are separate concerns.
+  const showAudioButton =
     onGenerateAudio !== undefined &&
-    actAudioUrls !== undefined &&
-    !actAudioUrls.act1 &&
-    !actAudioUrls.act2 &&
-    !actAudioUrls.act3;
+    !actAudioUrls?.act1 &&
+    !actAudioUrls?.act2 &&
+    !actAudioUrls?.act3;
 
   const acts: { label: string; sub: string; content: string; key: ActKey }[] = [
     { label: "Act I",   sub: "Setup",      content: story.acts.act1, key: "act1" },
@@ -135,7 +147,7 @@ export function StorySection({ story, genre, actAudioUrls, onRegenerate, isRegen
         {onRegenerate && !hasPrevious && (
           <button
             onClick={onRegenerate}
-            disabled={isRegenerating}
+            disabled={isRegenerating || anyRegenInFlight}
             title="Regenerate story outline"
             className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/50 hover:text-primary
                        hover:bg-primary/8 border border-transparent hover:border-primary/20
@@ -202,7 +214,7 @@ export function StorySection({ story, genre, actAudioUrls, onRegenerate, isRegen
         {/* Row: label + "Regenerate Audio" button (only visible after story regen) */}
         <div className="flex items-center justify-between">
           <p className="section-label">Three-Act Structure</p>
-          {audioWasCleared && (
+          {showAudioButton && (
             <button
               onClick={handleGenerateAudio}
               disabled={generatingAudio}

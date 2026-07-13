@@ -87,16 +87,9 @@ export function DemoDeck() {
     <div className="space-y-2">
       {/* Demo header pill */}
       <div className="flex items-center justify-between flex-wrap gap-2 mb-5">
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/50">
-            Sample Output
-          </span>
-          <span className="inline-flex items-center gap-1 text-[10px] font-semibold tracking-wide
-                           bg-[#0f62fe] text-white rounded-full px-2.5 py-0.5 leading-none">
-            <Cpu className="w-2.5 h-2.5" />
-            
-          </span>
-        </div>
+        <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/50">
+          Sample Output
+        </span>
         <span className="text-[11px] text-muted-foreground/40 italic">
           &ldquo;{DEMO.prompt}&rdquo;
         </span>

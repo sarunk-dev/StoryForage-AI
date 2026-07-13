@@ -33,6 +33,12 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+    if (prompt.trim().length > 2000) {
+      return NextResponse.json(
+        { error: "Prompt too long (max 2000 characters)" },
+        { status: 400 }
+      );
+    }
 
     const sys = systemPrompt(opts);
     const signal = req.signal;

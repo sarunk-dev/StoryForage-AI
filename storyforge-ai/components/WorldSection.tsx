@@ -10,9 +10,10 @@ interface WorldSectionProps {
   hasPrevious?: boolean;
   onRollback?: () => void;
   onKeep?: () => void;
+  anyRegenInFlight?: boolean;
 }
 
-export function WorldSection({ world, onRegenerate, isRegenerating, hasPrevious, onRollback, onKeep }: WorldSectionProps) {
+export function WorldSection({ world, onRegenerate, isRegenerating, hasPrevious, onRollback, onKeep, anyRegenInFlight }: WorldSectionProps) {
   const fields = [
     { label: "Geography & Environment", value: world.geography },
     { label: "Rules & Systems", value: world.rulesOrSystem },
@@ -29,7 +30,7 @@ export function WorldSection({ world, onRegenerate, isRegenerating, hasPrevious,
         {onRegenerate && !hasPrevious && (
           <button
             onClick={onRegenerate}
-            disabled={isRegenerating}
+            disabled={isRegenerating || anyRegenInFlight}
             title="Regenerate world building"
             className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/50 hover:text-primary
                        hover:bg-primary/8 border border-transparent hover:border-primary/20

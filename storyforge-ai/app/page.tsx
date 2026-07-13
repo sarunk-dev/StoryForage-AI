@@ -96,7 +96,9 @@ export default function Home() {
       setStep("world");      await sleep(900);
       setStep("artPrompts"); await sleep(900);
 
-      setDeck({ prompt, genre: options.genre, story, characters, world, imagePrompts, imageUrls: [] });
+      // Initialise imageUrls as a fixed 4-slot array so index-based access is always stable.
+      // Empty string = slot not yet loaded (falsy, same as before for ArtGrid's `if (url)` check).
+      setDeck({ prompt, genre: options.genre, story, characters, world, imagePrompts, imageUrls: ["", "", "", ""] });
 
       // ── Images + Narration — both lanes start immediately in parallel ─────
       // Lane A (images): image[0] → [1] → [2] → [3], each renders as it arrives.
@@ -167,7 +169,6 @@ export default function Home() {
 
       // Lane A: images — sequential, each renders as it arrives
       const fetchAllImages = async () => {
-        const urls: (string | null)[] = [null, null, null, null];
         for (let i = 0; i < (imagePrompts as string[]).length; i++) {
           setImageProgress(i + 1);
           try {
@@ -183,9 +184,13 @@ export default function Home() {
             });
             if (imgRes.ok) {
               const { imageUrl } = await imgRes.json();
-              urls[i] = imageUrl;
-              const snapshot = urls.map((u) => u ?? "").filter(Boolean);
-              setDeck((prev) => prev ? { ...prev, imageUrls: snapshot } : null);
+              // Write directly by slot index — no filter so array stays 4-slot stable
+              setDeck((prev) => {
+                if (!prev) return prev;
+                const updated = [...(prev.imageUrls ?? ["", "", "", ""])];
+                updated[i] = imageUrl;
+                return { ...prev, imageUrls: updated };
+              });
             }
           } catch {
             // Non-fatal — mark error for this slot and continue to next image
@@ -375,9 +380,9 @@ export default function Home() {
         const { imageUrl } = await imgRes.json();
         setDeck((prev) => {
           if (!prev) return prev;
-          const updated = [...(prev.imageUrls ?? [])];
+          const updated = [...(prev.imageUrls ?? ["", "", "", ""])];
           updated[index] = imageUrl;
-          return { ...prev, imageUrls: updated.filter(Boolean) as string[] };
+          return { ...prev, imageUrls: updated };
         });
       } else {
         setImageErrors((prev) => {
@@ -402,9 +407,8 @@ export default function Home() {
   const handleRegenerateImage = async (index: number) => {
     if (!deck?.story || !deck?.characters || !deck?.world || regeneratingImageIndex !== null) return;
 
-    // Snapshot old URL for rollback — imageUrls is a dense filtered array so
-    // access by index may be undefined if that slot hasn't loaded yet
-    const oldUrl = (deck.imageUrls ?? [])[index] ?? null;
+    // Snapshot old URL for rollback — grab by slot index directly (4-slot array)
+    const oldUrl = (deck.imageUrls ?? [])[index] || null;
     setRegeneratingImageIndex(index);
 
     try {
@@ -455,10 +459,9 @@ export default function Home() {
       });
       setDeck((prev) => {
         if (!prev) return prev;
-        // imageUrls is kept as a dense array indexed by slot
-        const updated = [...((prev.imageUrls ?? []) as string[])];
+        const updated = [...(prev.imageUrls ?? ["", "", "", ""])];
         updated[index] = imageUrl;
-        return { ...prev, imageUrls: updated.filter(Boolean) as string[] };
+        return { ...prev, imageUrls: updated };
       });
     } finally {
       setRegeneratingImageIndex(null);
@@ -470,9 +473,9 @@ export default function Home() {
     if (!oldUrl) return;
     setDeck((prev) => {
       if (!prev) return prev;
-      const updated = [...((prev.imageUrls ?? []) as string[])];
+      const updated = [...(prev.imageUrls ?? ["", "", "", ""])];
       updated[index] = oldUrl;
-      return { ...prev, imageUrls: updated.filter(Boolean) as string[] };
+      return { ...prev, imageUrls: updated };
     });
     setPreviousImageUrls((prev) => {
       const next = [...prev];
@@ -492,8 +495,18 @@ export default function Home() {
   const isLoading = step !== "idle" && step !== "done" && step !== "error";
   const isDone    = step === "done";
   const hasText   = deck?.story && deck?.characters && deck?.world;
-  const hasImages = (deck?.imageUrls?.length ?? 0) > 0;
+  const hasImages = deck?.imageUrls?.some(u => !!u) ?? false;
   const showHero  = step === "idle";
+
+  // Only the 4 Granite text steps block the regenerate buttons.
+  // Audio and image steps don't use Granite — buttons should be visible then.
+  const graniteRunning = (["story", "characters", "world", "artPrompts"] as GenerationStep[]).includes(step);
+
+  // All 4 image slots must be loaded before individual image regen is available.
+  const allImagesLoaded = (deck?.imageUrls ?? []).filter(u => !!u).length === 4;
+
+  // Single lock: if any regen operation is in flight, all other regen buttons are disabled.
+  const anyRegenInFlight = regenerating !== null || regeneratingImageIndex !== null;
 
   // Collect active option badges to show below section header
   const activeBadges = [
@@ -630,9 +643,10 @@ export default function Home() {
               story={deck.story!}
               genre={options.genre}
               actAudioUrls={deck.actAudioUrls}
-              onRegenerate={hasText ? handleRegenerateStory : undefined}
+              onRegenerate={hasText && !graniteRunning ? handleRegenerateStory : undefined}
               isRegenerating={regenerating === "story"}
-              onGenerateAudio={isDone ? () => handleGenerateAudio(deck.story!) : undefined}
+              anyRegenInFlight={anyRegenInFlight}
+              onGenerateAudio={hasText ? () => handleGenerateAudio(deck.story!) : undefined}
               hasPrevious={!!previousVersions?.story}
               onRollback={handleRollbackStory}
               onKeep={handleKeepStory}
@@ -640,8 +654,9 @@ export default function Home() {
             <Separator />
             <CharactersSection
               characters={deck.characters!}
-              onRegenerate={hasText ? handleRegenerateCharacters : undefined}
+              onRegenerate={hasText && !graniteRunning ? handleRegenerateCharacters : undefined}
               isRegenerating={regenerating === "characters"}
+              anyRegenInFlight={anyRegenInFlight}
               hasPrevious={!!previousVersions?.characters}
               onRollback={handleRollbackCharacters}
               onKeep={handleKeepCharacters}
@@ -649,8 +664,9 @@ export default function Home() {
             <Separator />
             <WorldSection
               world={deck.world!}
-              onRegenerate={hasText ? handleRegenerateWorld : undefined}
+              onRegenerate={hasText && !graniteRunning ? handleRegenerateWorld : undefined}
               isRegenerating={regenerating === "world"}
+              anyRegenInFlight={anyRegenInFlight}
               hasPrevious={!!previousVersions?.world}
               onRollback={handleRollbackWorld}
               onKeep={handleKeepWorld}
@@ -664,8 +680,9 @@ export default function Home() {
                   isLoading={step === "audio" || step === "images"}
                   imageErrors={imageErrors}
                   onRetry={handleRetryImage}
-                  onRegenerate={isDone ? handleRegenerateImage : undefined}
+                  onRegenerate={allImagesLoaded ? handleRegenerateImage : undefined}
                   regeneratingIndex={regeneratingImageIndex}
+                  anyRegenInFlight={anyRegenInFlight}
                   previousImageUrls={previousImageUrls}
                   onRollback={handleRollbackImage}
                   onKeep={handleKeepImage}

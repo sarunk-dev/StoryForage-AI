@@ -85,9 +85,10 @@ interface CharactersSectionProps {
   hasPrevious?: boolean;
   onRollback?: () => void;
   onKeep?: () => void;
+  anyRegenInFlight?: boolean;
 }
 
-export function CharactersSection({ characters, onRegenerate, isRegenerating, hasPrevious, onRollback, onKeep }: CharactersSectionProps) {
+export function CharactersSection({ characters, onRegenerate, isRegenerating, hasPrevious, onRollback, onKeep, anyRegenInFlight }: CharactersSectionProps) {
   return (
     <section className="space-y-6">
       <div className="flex items-center justify-between">
@@ -98,7 +99,7 @@ export function CharactersSection({ characters, onRegenerate, isRegenerating, ha
         {onRegenerate && !hasPrevious && (
           <button
             onClick={onRegenerate}
-            disabled={isRegenerating}
+            disabled={isRegenerating || anyRegenInFlight}
             title="Regenerate characters"
             className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/50 hover:text-primary
                        hover:bg-primary/8 border border-transparent hover:border-primary/20

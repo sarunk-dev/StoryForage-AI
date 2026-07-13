@@ -224,7 +224,10 @@ export async function exportToPDF(deck: PitchDeck): Promise<void> {
   // Fix: compute all 4 image positions absolutely before drawing any image.
   // This prevents mid-grid page breaks from corrupting the second row's Y offset.
 
-  if (deck.imageUrls.length > 0) {
+  // Filter out empty-string slots (sparse array — slot not yet loaded) before rendering
+  const loadedImages = deck.imageUrls.map((url, idx) => ({ url, idx })).filter(({ url }) => !!url);
+
+  if (loadedImages.length > 0) {
     const captions = ["Establishing Scene", "Main Character", "World & Setting", "Thematic Mood"];
     const imgW = (contentW - 6) / 2;
     const imgH = imgW; // square — matches 768×768 generated images
@@ -240,18 +243,19 @@ export async function exportToPDF(deck: PitchDeck): Promise<void> {
 
     const gridTop = y; // fixed anchor — never changes mid-grid
 
-    for (let i = 0; i < Math.min(4, deck.imageUrls.length); i++) {
+    for (let i = 0; i < Math.min(4, loadedImages.length); i++) {
+      const { url: imgUrl, idx: slotIdx } = loadedImages[i];
       const col = i % 2;
       const row = Math.floor(i / 2);
       const imgX = margin + col * (imgW + 6);
       const imgY = gridTop + row * (imgH + captionH + rowGap);
 
       try {
-        pdf.addImage(deck.imageUrls[i], "PNG", imgX, imgY, imgW, imgH);
+        pdf.addImage(imgUrl, "PNG", imgX, imgY, imgW, imgH);
         pdf.setFontSize(6.5);
         pdf.setTextColor("#9ca3af");
         pdf.setFont("helvetica", "normal");
-        pdf.text(captions[i], imgX, imgY + imgH + 3.5);
+        pdf.text(captions[slotIdx] ?? captions[i], imgX, imgY + imgH + 3.5);
       } catch {
         // If image embed fails, draw a placeholder rect
         pdf.setFillColor("#f3f4f6");

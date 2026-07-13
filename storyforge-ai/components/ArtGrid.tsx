@@ -15,6 +15,8 @@ interface ArtGridProps {
   previousImageUrls?: (string | null)[];
   onRollback?: (index: number) => void;
   onKeep?: (index: number) => void;
+  /** True when ANY regeneration operation is in flight — disables all image regen buttons */
+  anyRegenInFlight?: boolean;
 }
 
 const IMAGE_LABELS = [
@@ -71,9 +73,10 @@ export function ArtGrid({
   previousImageUrls,
   onRollback,
   onKeep,
+  anyRegenInFlight,
 }: ArtGridProps) {
-  // True when any slot is busy — disables all other Regenerate buttons
-  const anyRegenerating = regeneratingIndex !== null && regeneratingIndex !== undefined;
+  // Disable all image regen buttons when any operation (text or image) is in flight
+  const anyBusy = anyRegenInFlight || (regeneratingIndex !== null && regeneratingIndex !== undefined);
 
   return (
     <section className="space-y-5">
@@ -181,7 +184,7 @@ export function ArtGrid({
                     {onRegenerate && (
                       <button
                         onClick={() => onRegenerate(idx)}
-                        disabled={anyRegenerating}
+                        disabled={anyBusy}
                         title={`Regenerate ${label}`}
                         className={[
                           "absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center",

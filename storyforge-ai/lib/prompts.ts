@@ -303,13 +303,6 @@ Each prompt must be 2-4 sentences. Always include: specific subject, named setti
 // Asks Granite to produce exactly ONE image prompt for the given slot index,
 // using the current story/characters/world so the result is always in sync.
 
-const SLOT_ROLES = [
-  "An establishing scene — a key cinematic moment from the acts, wide shot, shows the world",
-  "A character portrait of the protagonist — based on their physical description, in their world",
-  "A key location from the world's setting — a specific place mentioned in the acts",
-  "A thematic/mood image — symbolic, abstract, capturing the central theme of the story",
-] as const;
-
 export function singleArtPrompt(
   index: number,
   story: StoryOutline,

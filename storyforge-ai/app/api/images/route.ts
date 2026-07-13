@@ -14,10 +14,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "prompt is required" }, { status: 400 });
     }
 
+    // Silently truncate oversized art prompts (Granite-generated, not raw user input)
+    const safePrompt = prompt.trim().slice(0, 4000);
+
     // Sequential on the server — Pollinations hard-429s parallel requests
     // from the same IP. page.tsx calls this one image at a time so each
     // request lands in its own rate-limit window.
-    const imageUrl = await pollinationsImage(prompt, index, genre, tone);
+    const imageUrl = await pollinationsImage(safePrompt, index, genre, tone);
     return NextResponse.json({ imageUrl });
   } catch (error) {
     console.error("[/api/images] error:", error);
