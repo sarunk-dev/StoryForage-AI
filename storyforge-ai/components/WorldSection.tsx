@@ -1,15 +1,18 @@
 "use client";
 
 import type { WorldBuilding } from "@/lib/types";
-import { Globe, RefreshCw } from "lucide-react";
+import { Globe, RefreshCw, Undo2, Check } from "lucide-react";
 
 interface WorldSectionProps {
   world: WorldBuilding;
   onRegenerate?: () => void;
   isRegenerating?: boolean;
+  hasPrevious?: boolean;
+  onRollback?: () => void;
+  onKeep?: () => void;
 }
 
-export function WorldSection({ world, onRegenerate, isRegenerating }: WorldSectionProps) {
+export function WorldSection({ world, onRegenerate, isRegenerating, hasPrevious, onRollback, onKeep }: WorldSectionProps) {
   const fields = [
     { label: "Geography & Environment", value: world.geography },
     { label: "Rules & Systems", value: world.rulesOrSystem },
@@ -23,7 +26,7 @@ export function WorldSection({ world, onRegenerate, isRegenerating }: WorldSecti
           <Globe className="w-3.5 h-3.5" />
           World Building
         </div>
-        {onRegenerate && (
+        {onRegenerate && !hasPrevious && (
           <button
             onClick={onRegenerate}
             disabled={isRegenerating}
@@ -37,6 +40,34 @@ export function WorldSection({ world, onRegenerate, isRegenerating }: WorldSecti
           </button>
         )}
       </div>
+
+      {/* Rollback banner — appears after a successful regeneration */}
+      {hasPrevious && (
+        <div className="flex items-center gap-2 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2
+                        animate-in fade-in slide-in-from-top-1 duration-200">
+          <span className="text-[11px] text-muted-foreground flex-1">
+            New version generated — keep it or roll back to the previous one.
+          </span>
+          <button
+            onClick={onRollback}
+            className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground/70
+                       hover:text-foreground border border-border/50 hover:border-border
+                       rounded-md px-2.5 py-1 transition-colors"
+          >
+            <Undo2 className="w-3 h-3" />
+            Roll back
+          </button>
+          <button
+            onClick={onKeep}
+            className="flex items-center gap-1 text-[11px] font-semibold text-primary
+                       hover:text-primary/80 border border-primary/30 hover:border-primary/50
+                       bg-primary/8 hover:bg-primary/12 rounded-md px-2.5 py-1 transition-colors"
+          >
+            <Check className="w-3 h-3" />
+            Keep new
+          </button>
+        </div>
+      )}
 
       {/* Ink-surface setting card */}
       <div className="rounded-2xl ink-surface px-6 py-5 space-y-1.5">

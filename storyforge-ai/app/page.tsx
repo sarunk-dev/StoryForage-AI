@@ -27,6 +27,13 @@ export default function Home() {
   const [deck, setDeck] = useState<Partial<PitchDeck> | null>(null);
   const [dark, setDark] = useState(false);
   const [regenerating, setRegenerating] = useState<RegeneratingSection>(null);
+  // Stores a one-level-deep snapshot of whichever section was just regenerated.
+  // Shown as a "Roll back / Keep new" banner until the user dismisses it.
+  const [previousVersions, setPreviousVersions] = useState<{
+    story?: StoryOutline;
+    characters?: Character[];
+    world?: WorldBuilding;
+  } | null>(null);
   const [imageProgress, setImageProgress] = useState(0);
   const [imageErrors, setImageErrors] = useState<(string | null)[]>([null, null, null, null]);
   // Demo deck is expanded by default so judges see output immediately
@@ -61,6 +68,7 @@ export default function Home() {
     setStep("story");
     setError(null);
     setDeck(null);
+    setPreviousVersions(null);
     setImageProgress(0);
     setImageErrors([null, null, null, null]);
 
@@ -212,6 +220,8 @@ export default function Home() {
   const handleRegenerateStory = async () => {
     if (!deck || regenerating) return;
     setRegenerating("story");
+    // Snapshot before overwrite so the user can roll back
+    const oldStory = deck.story;
     try {
       const res = await fetch("/api/regenerate", {
         method: "POST",
@@ -220,6 +230,8 @@ export default function Home() {
       });
       if (!res.ok) return;
       const { story } = (await res.json()) as { story: StoryOutline };
+      // Snapshot only on success — no point offering rollback if regen failed
+      setPreviousVersions({ story: oldStory });
       // Clear stale audio — user must click "Generate Audio" to refresh it
       setDeck((prev) => prev ? { ...prev, story, actAudioUrls: {} } : null);
     } finally {
@@ -227,9 +239,18 @@ export default function Home() {
     }
   };
 
+  const handleRollbackStory = () => {
+    if (!previousVersions?.story) return;
+    setDeck((prev) => prev ? { ...prev, story: previousVersions.story! } : null);
+    setPreviousVersions(null);
+  };
+  const handleKeepStory = () => setPreviousVersions(null);
+
   const handleRegenerateCharacters = async () => {
     if (!deck?.story || regenerating) return;
     setRegenerating("characters");
+    // Snapshot before overwrite
+    const oldCharacters = deck.characters;
     try {
       const res = await fetch("/api/regenerate", {
         method: "POST",
@@ -238,15 +259,25 @@ export default function Home() {
       });
       if (!res.ok) return;
       const { characters } = (await res.json()) as { characters: Character[] };
+      setPreviousVersions({ characters: oldCharacters });
       setDeck((prev) => prev ? { ...prev, characters } : null);
     } finally {
       setRegenerating(null);
     }
   };
 
+  const handleRollbackCharacters = () => {
+    if (!previousVersions?.characters) return;
+    setDeck((prev) => prev ? { ...prev, characters: previousVersions.characters! } : null);
+    setPreviousVersions(null);
+  };
+  const handleKeepCharacters = () => setPreviousVersions(null);
+
   const handleRegenerateWorld = async () => {
     if (!deck?.story || !deck?.characters || regenerating) return;
     setRegenerating("world");
+    // Snapshot before overwrite
+    const oldWorld = deck.world;
     try {
       const res = await fetch("/api/regenerate", {
         method: "POST",
@@ -255,11 +286,19 @@ export default function Home() {
       });
       if (!res.ok) return;
       const { world } = (await res.json()) as { world: WorldBuilding };
+      setPreviousVersions({ world: oldWorld });
       setDeck((prev) => prev ? { ...prev, world } : null);
     } finally {
       setRegenerating(null);
     }
   };
+
+  const handleRollbackWorld = () => {
+    if (!previousVersions?.world) return;
+    setDeck((prev) => prev ? { ...prev, world: previousVersions.world! } : null);
+    setPreviousVersions(null);
+  };
+  const handleKeepWorld = () => setPreviousVersions(null);
 
   // ── Manual audio generation — triggered by "Generate Audio" button ───────────
   // Same two-sweep logic as the main generation flow.
@@ -495,18 +534,27 @@ export default function Home() {
               onRegenerate={isDone ? handleRegenerateStory : undefined}
               isRegenerating={regenerating === "story"}
               onGenerateAudio={isDone ? () => handleGenerateAudio(deck.story!) : undefined}
+              hasPrevious={!!previousVersions?.story}
+              onRollback={handleRollbackStory}
+              onKeep={handleKeepStory}
             />
             <Separator />
             <CharactersSection
               characters={deck.characters!}
               onRegenerate={isDone ? handleRegenerateCharacters : undefined}
               isRegenerating={regenerating === "characters"}
+              hasPrevious={!!previousVersions?.characters}
+              onRollback={handleRollbackCharacters}
+              onKeep={handleKeepCharacters}
             />
             <Separator />
             <WorldSection
               world={deck.world!}
               onRegenerate={isDone ? handleRegenerateWorld : undefined}
               isRegenerating={regenerating === "world"}
+              hasPrevious={!!previousVersions?.world}
+              onRollback={handleRollbackWorld}
+              onKeep={handleKeepWorld}
             />
 
             {(hasImages || step === "audio" || step === "images") && (
