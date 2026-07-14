@@ -20,7 +20,9 @@ async function fetchWithRetry(url: string, maxRetries = 3): Promise<Response> {
   let delay = 8000; // 8 s first back-off — Pollinations 429 window
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const res = await fetch(url);
-    if (res.status !== 429) return res;
+    
+    if (res.status !== 429 && res.status !== 500) return res;
+
     if (attempt < maxRetries) {
       console.warn(`[pollinations] 429 — retrying in ${delay / 1000}s (attempt ${attempt + 1}/${maxRetries})`);
       await sleep(delay);
