@@ -237,15 +237,6 @@ IBM Bob was the **primary development tool** for this project — every signific
 
 ---
 
-## Demo Note
-
-> **The demo video is recorded on `localhost:3000`.** Vercel deployment was skipped to avoid
-> environment configuration risk in the final submission window. The app runs fully on local
-> dev with the three API keys above. Anyone evaluating the submission can run it locally
-> using the setup instructions in this README.
-
----
-
 ## Challenge Alignment
 
 | Judging Criterion | How StoryForge AI addresses it |
