@@ -127,6 +127,11 @@ A sequential chain — prompt 1 → output 1 → prompt 2 that includes output 1
 ```bash
 git clone <repo-url>
 cd storyforge-ai
+
+.\install.ps1   #run this for Windows OS
+
+bash install.sh  #run this for macOS/Linux OS
+
 npm install
 ```
 
@@ -204,10 +209,7 @@ storyforge-ai/
     replicate.ts                 ← Pollinations.ai FLUX client — 768×768, retry, base64 output
     pdfExport.ts                 ← jsPDF styled A4 pitch deck renderer
     types.ts                     ← TypeScript interfaces + GENRES/TONES/ERAS/ENDINGS constants
-  MytestedFiles/                 ← Pre-build Python validation scripts (reference only)
-    flux_2_pro_test.py           ← Validated Flux 2 Pro API pattern
-    flux_kontext_test.py         ← Validated Flux Kontext Pro pattern
-    Elevnlab_test.py             ← Validated ElevenLabs TTS pattern
+
 ```
 
 ---
