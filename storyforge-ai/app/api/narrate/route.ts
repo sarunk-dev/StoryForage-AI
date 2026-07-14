@@ -8,7 +8,7 @@ export const maxDuration = 30;
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY!;
 
 // ── Model ────────────────────────────────────────────────────────────────────
-const MODEL_ID = "eleven_multilingual_v2";
+const MODEL_ID = "eleven_turbo_v2_5";
 
 // ── Voice roster ─────────────────────────────────────────────────────────────
 const VOICES: Record<string, { id: string; description: string }> = {
