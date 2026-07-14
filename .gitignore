@@ -1,0 +1,21 @@
+ORE
+# Ignore MytestedFiles folder
+MytestedFiles/
+ 
+# Ignore plan files
+cleanup-security-plan.md
+image-regenerate-rollback-plan.md
+rollback-regenerate-plan.md
+sequential-image-generation-plan.md
+ 
+# Ignore PRD files
+PRD_Draft.md
+PRD_Final.md
+ 
+# Ignore documentation files
+PROGRESS.md
+SPEC.md
+ 
+# Ignore prompt files
+prompt.txt
+ 
