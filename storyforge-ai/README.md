@@ -106,7 +106,7 @@ A sequential chain — prompt 1 → output 1 → prompt 2 that includes output 1
 | Layer | Technology |
 |---|---|
 | Frontend + API routes | Next.js 15 (App Router), TypeScript, Tailwind CSS, shadcn/ui |
-| LLM | IBM Granite 3.3 Instruct via `@ibm-cloud/watsonx-ai` SDK |
+| LLM | IBM Granite 4 H-Small (`ibm/granite-4-h-small`) via `@ibm-cloud/watsonx-ai` SDK |
 | Image generation | Pollinations.ai (FLUX model, 768×768, free, no API key) |
 | Audio narration | ElevenLabs TTS (`eleven_turbo_v2_5`) |
 | PDF export | jsPDF (client-side, no server round-trip) |
