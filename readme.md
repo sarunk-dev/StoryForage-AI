@@ -7,10 +7,10 @@
 
 > **IBM AI Builders Challenge — July 2026 · Creative Industries theme**
 
-**One sentence becomes a complete story pitch deck — outline, characters, world-building, concept art, audio narration, and a downloadable PDF — powered by IBM Granite**
-
 
 ![StoryForge AI — Your story, fully realized](/storyforge-ai/assets/hero.png)
+**"One sentence becomes a complete story pitch deck"**
+Story outline, characters, world-building, concept art, audio narration, and a downloadable PDF — powered by **IBM Granite**
 
 ## The Problem
 
@@ -33,7 +33,7 @@ StoryForge AI takes a single line of user input — e.g. *"A blind cartographer 
   <img src="storyforge-ai/assets/gifs/ProgressPDF.gif" alt="Progress Demo" width="800">
 </p>
  
-*Clear, real-time feedback on what AI is running at each moment.*
+*Clear, real-time Progress on what AI is running at each moment.*
 
 
 ---
@@ -48,7 +48,6 @@ StoryForge AI takes a single line of user input — e.g. *"A blind cartographer 
  
 ---
  
-## 🔧 Advanced Features
  
 ### Per-Section Regeneration
  
