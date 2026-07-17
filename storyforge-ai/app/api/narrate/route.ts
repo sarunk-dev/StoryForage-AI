@@ -11,15 +11,17 @@ const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY!;
 const MODEL_ID = "eleven_turbo_v2_5";
 
 // ── Voice roster ─────────────────────────────────────────────────────────────
+// Free-tier voices (no paid plan required for API access)
 const VOICES: Record<string, { id: string; description: string }> = {
-  george: { id: "JBFqnCBsd6RMkjVDRZzb", description: "Warm, Captivating Storyteller — narrative_story" },
-  harry:  { id: "SOYHLrjzK2X1ezoPC6cr", description: "Fierce, Intense — characters_animation"          },
-  brian:  { id: "nPczCjzI2devNBz1zQrb", description: "Deep, Resonant, Comforting"                       },
-  sarah:  { id: "EXAVITQu4vr4xnSDxMaL", description: "Mature, Reassuring — entertainment_tv"            },
-  lily:   { id: "pFZP5JQG7iQjIQuC4Bku", description: "Velvety Actress — informative/dramatic"            },
-  daniel: { id: "onwK4e9ZLuTAKqWW03F9", description: "Steady Broadcaster — clear fallback"               },
-  callum: { id: "N2lVS1w4EtoT3dr4eOWO", description: "Husky Trickster — mysterious/fantasy"              },
-  charlie:{ id: "IKne3meq5aSn9XLyUdCD", description: "Deep, Confident, Energetic — adventure"            },
+  george:    { id: "JBFqnCBsd6RMkjVDRZzb", description: "Bold, Commanding — adventure"             },
+  laura:     { id: "FGY2WhTYpPnrIDTdsKH5", description: "Warm, Expressive, Feminine — romance"     },
+  callum:    { id: "N2lVS1w4EtoT3dr4eOWO", description: "Sharp, Intense, Edgy — thriller"          },
+  matilda:   { id: "XrExE9yKIg1WjnnlVkGX", description: "Soft, Warm, Youthful — fantasy"           },
+  eric:      { id: "cjVigY5qzO86Huf0OWal", description: "Steady, Measured, Clear — fallback"       },
+  harry:     { id: "SOYHLrjzK2X1ezoPC6cr", description: "Dark, Fierce, Intense — horror"           },
+  daniel:    { id: "onwK4e9ZLuTAKqWW03F9", description: "Rich, Formal, Authoritative — historical" },
+  alice:     { id: "Xb7hH8MSUJpSbSDYk0k2", description: "Crisp, Intelligent, Cool — sci-fi"        },
+  brian:     { id: "nPczCjzI2devNBz1zQrb", description: "Deep, Measured, Brooding — mystery"       },
 };
 
 // ── Genre → voice + base voice_settings ─────────────────────────────────────
@@ -36,15 +38,15 @@ interface GenreProfile {
 }
 
 const GENRE_PROFILES: Record<string, GenreProfile> = {
-  Fantasy:    { voiceKey: "george",  settings: { stability: 0.32, similarity_boost: 0.85, style: 0.50, use_speaker_boost: true } },
-  "Sci-Fi":   { voiceKey: "brian",   settings: { stability: 0.42, similarity_boost: 0.85, style: 0.38, use_speaker_boost: true } },
-  Thriller:   { voiceKey: "harry",   settings: { stability: 0.28, similarity_boost: 0.88, style: 0.60, use_speaker_boost: true } },
-  Horror:     { voiceKey: "harry",   settings: { stability: 0.25, similarity_boost: 0.88, style: 0.65, use_speaker_boost: true } },
-  Romance:    { voiceKey: "sarah",   settings: { stability: 0.38, similarity_boost: 0.85, style: 0.45, use_speaker_boost: true } },
-  Historical: { voiceKey: "george",  settings: { stability: 0.48, similarity_boost: 0.85, style: 0.35, use_speaker_boost: true } },
-  Mystery:    { voiceKey: "callum",  settings: { stability: 0.30, similarity_boost: 0.87, style: 0.55, use_speaker_boost: true } },
-  Adventure:  { voiceKey: "charlie", settings: { stability: 0.30, similarity_boost: 0.85, style: 0.55, use_speaker_boost: true } },
-  None:       { voiceKey: "daniel",  settings: { stability: 0.40, similarity_boost: 0.85, style: 0.42, use_speaker_boost: true } },
+  Fantasy:    { voiceKey: "matilda",   settings: { stability: 0.32, similarity_boost: 0.85, style: 0.50, use_speaker_boost: true } },
+  "Sci-Fi":   { voiceKey: "alice",     settings: { stability: 0.42, similarity_boost: 0.85, style: 0.38, use_speaker_boost: true } },
+  Thriller:   { voiceKey: "callum",    settings: { stability: 0.28, similarity_boost: 0.88, style: 0.60, use_speaker_boost: true } },
+  Horror:     { voiceKey: "harry",     settings: { stability: 0.25, similarity_boost: 0.88, style: 0.65, use_speaker_boost: true } },
+  Romance:    { voiceKey: "laura",     settings: { stability: 0.38, similarity_boost: 0.85, style: 0.45, use_speaker_boost: true } },
+  Historical: { voiceKey: "daniel",    settings: { stability: 0.48, similarity_boost: 0.85, style: 0.35, use_speaker_boost: true } },
+  Mystery:    { voiceKey: "brian",     settings: { stability: 0.30, similarity_boost: 0.87, style: 0.55, use_speaker_boost: true } },
+  Adventure:  { voiceKey: "george",    settings: { stability: 0.30, similarity_boost: 0.85, style: 0.55, use_speaker_boost: true } },
+  None:       { voiceKey: "eric",      settings: { stability: 0.40, similarity_boost: 0.85, style: 0.42, use_speaker_boost: true } },
 };
 
 // ── Per-act settings overlay ─────────────────────────────────────────────────
@@ -103,7 +105,7 @@ export async function POST(req: NextRequest) {
     const resolvedTone  = tone ?? "";
 
     const profile       = GENRE_PROFILES[resolvedGenre] ?? GENRE_PROFILES["None"];
-    const voice         = VOICES[profile.voiceKey] ?? VOICES["daniel"];
+    const voice         = VOICES[profile.voiceKey] ?? VOICES["nathan"];
     const finalSettings = blendSettings(profile.settings, ACT_OVERLAYS[resolvedAct] ?? {});
     // Silently truncate oversized act text (Granite-generated, not raw user input)
     const narrationText = prepareNarrationText(text.slice(0, 4000), resolvedAct, resolvedTone);
@@ -132,6 +134,7 @@ export async function POST(req: NextRequest) {
 
     if (!ttsRes.ok) {
       const errText = await ttsRes.text();
+      console.error(`[narrate] ElevenLabs ${ttsRes.status}:`, errText);
       return NextResponse.json(
         { error: `ElevenLabs ${ttsRes.status}: ${errText}` },
         { status: ttsRes.status === 429 ? 429 : 502 }

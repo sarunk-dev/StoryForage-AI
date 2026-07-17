@@ -1,22 +1,88 @@
-# StoryForge AI
+<h1>
+  StoryForge AI
+  <sub>
+    <sup> 🤖 Multi-Agent Creative Pipeline </sup>
+  </sub>
+</h1>
 
 > **IBM AI Builders Challenge — July 2026 · Creative Industries theme**
 
-**One sentence becomes a complete story pitch deck — outline, characters, world-building, concept art, audio narration, and a downloadable PDF — powered by IBM Granite.**
+**One sentence becomes a complete story pitch deck — outline, characters, world-building, concept art, audio narration, and a downloadable PDF — powered by IBM Granite**
 
----
+
+![StoryForge AI — Your story, fully realized](/storyforge-ai/assets/hero.png)
 
 ## The Problem
 
-Creators — writers, indie game designers, tabletop RPG builders, filmmakers — have sparks of ideas constantly. Turning a concept into a shareable, presentable pitch takes hours: writing a premise, inventing characters, designing the world, sourcing placeholder art, and formatting it all into something you can hand to a collaborator.
+Creators, writers, indie game designers, tabletop RPG builders, filmmakers have sparks of ideas constantly. Turning a concept into a shareable, presentable pitch takes hours. writing a premise, inventing characters, designing the world, sourcing placeholder art, and formatting it all into something you can hand to a collaborator.
 
 Existing AI tools solve these pieces in isolation across different tabs. Nobody stitches them into one coherent, downloadable creative document automatically.
 
----
 
 ## The Solution
 
 StoryForge AI takes a single line of user input — e.g. *"A blind cartographer discovers the world is flat"* — and generates a complete, publication-quality **Story Pitch Deck** in under 60 seconds:
+
+## 🎯 Watch It In Action
+ 
+
+
+### Step-by-Step Pipeline
+
+<p align="center">
+  <img src="storyforge-ai/assets/gifs/ProgressPDF.gif" alt="Progress Demo" width="800">
+</p>
+ 
+*Clear, real-time feedback on what AI is running at each moment.*
+
+
+---
+### Fully Generated Pitch Deck
+
+<p align="center">
+  <img src="storyforge-ai/assets/gifs/WholePitch.gif" alt="Progress Demo" width="800">
+</p>
+ 
+
+*Watch a complete pitch deck come together in real-time — story, characters, images, and world-building all coherently generated.*
+ 
+---
+ 
+## 🔧 Advanced Features
+ 
+### Per-Section Regeneration
+ 
+
+
+<p align="center">
+  <img src="storyforge-ai/assets/gifs/textregen.gif" alt="Progress Demo" width="800">
+</p>
+ 
+*Don't like a character or the story direction? Click **Regenerate** on any section. The AI re-runs just that step using the current deck as context. One-click **Rollback** if you want to keep the original.*
+
+
+ ---
+### Per-Image Regeneration
+ 
+
+<p align="center">
+  <img src="storyforge-ai/assets/gifs/imageregen.gif" alt="Progress Demo" width="800">
+</p>
+ 
+*Hover any of the 4 concept art images → click the regenerate icon. Granite crafts a new art prompt, FLUX generates a new image. Keep or rollback with a single click.*
+
+ ---
+### One-Click PDF Export
+ 
+
+<p align="center">
+  <img src="storyforge-ai/assets/gifs/exportpdf.gif" alt="Progress Demo" width="800">
+</p>
+ 
+*Click **Export PDF** in the header. Your styled, publication-ready pitch deck downloads as A4 with all images, character profiles, world-building, and narration credits.*
+ 
+---
+
 
 | Output | What's generated |
 |---|---|
@@ -31,31 +97,33 @@ Everything stays **coherent** — character names, the world name, visual art pr
 
 ---
 
-## AI Stack
+## 🧠 Multi-Agent AI Architecture
+
+StoryForge AI is built as a **multi-agent creative pipeline**. Each specialized AI agent is responsible for one creative task and passes structured output to the next agent, ensuring consistency across the entire pitch deck.
 
 ```
 User Prompt + Story Options
         │
         ▼
-[Step 1] Story Agent        ← IBM Granite 4 (Granite 3.3 Instruct via watsonx.ai)
-        │                      → title, logline, premise, 3-act outline, theme, tone
-        ▼
-[Step 2] Character Agent    ← IBM Granite 4 (receives story context)
-        │                      → 3 characters with name/role/backstory/motivation/flaw/quote
-        ▼
-[Step 3] World Agent        ← IBM Granite 4 (receives story + character context)
-        │                      → settingName, geography, rulesOrSystem, culture, atmosphere
-        ▼
-[Step 4] Art Prompt Agent   ← IBM Granite 4 (receives all above)
-        │                      → 4 cinematic image prompts referencing real names + locations
+   Story Agent     ← IBM Granite 4 (Granite 3.3 Instruct via watsonx.ai
+        │          → title, logline, premise, 3-act outline, theme, tone
+        │                 
+        ├──────► [Parallel] Narration Agent
+        │          → ElevenLabs TTS
+        │          → Generates 3-act narration
         │
-        ├── [Parallel] Image Lane  → Pollinations.ai (FLUX model, 768×768)
-        │                             → 4 concept art images, rendered as they arrive
+  Character Agent  ← IBM Granite 4 (receives story context)
+        │          → Generates 3 character Profiles with name/role/backstory/motivation/flaw/quote
+        ▼
+   World Agent     ← IBM Granite 4 (receives story + character context)
+        │          → settingName, geography, rulesOrSystem, culture, atmosphere
+        ▼
+Art Prompt Agent   ← IBM Granite 4 (receives all above)
+        │          → 4 cinematic image prompts referencing real names + locations
         │
-        └── [Parallel] Audio Lane  → ElevenLabs TTS (eleven_turbo_v2_5)
-                                      → 3-act narration, per-genre voice + dynamics
-                                      → audio play buttons appear act-by-act
-        │
+        ├─────► [Parallel] Image Generation Agent  
+        │          → Pollinations.ai (FLUX model, 768×768) 
+        │          → 4 concept art images, rendered as they arrive
         ▼
 Pitch Deck assembled in-browser
         │
@@ -65,7 +133,7 @@ PDF Export (jsPDF, client-side, no server round-trip)
 
 ### Why Sequential Chain (not LangGraph)
 
-A sequential chain — prompt 1 → output 1 → prompt 2 that includes output 1 as context — achieves the same coherence as a multi-agent pipeline for this use case. LangGraph adds graph state management and tool registration complexity that buys nothing extra for a solo-built creative generation flow. Simplicity is a feature: the architecture is readable in five minutes and the demo is reliable.
+A sequential chain — prompt 1 → output 1 → prompt 2 that includes output 1 as context — achieves the same coherence as a multi-agent pipeline for this use case. LangGraph adds graph state management and tool registration complexity that buys nothing extra for a solo-built creative generation flow. Simplicity is a feature, the architecture is readable in five minutes and the demo is reliable.
 
 ---
 
@@ -81,7 +149,7 @@ A sequential chain — prompt 1 → output 1 → prompt 2 that includes output 1
 - **Dark mode** — full theme toggle in the header
 - **Example prompt chips** — 4 clickable concepts on the landing page for instant demo
 
-### Regenerate & Rollback (Beyond original spec)
+### Regenerate & Rollback
 - **Per-section regenerate** — Story, Characters, and World each have a Regenerate button; Granite re-runs only that step using the current deck as context
 - **Per-image regenerate** — hover any of the 4 concept art images → Regenerate icon; Granite rewrites the art prompt for that slot, then FLUX generates a new image
 - **Rollback / Keep UX** — every regeneration (text and image) snapshots the previous version; a "Roll back / Keep new" banner lets you undo with one click
@@ -90,7 +158,7 @@ A sequential chain — prompt 1 → output 1 → prompt 2 that includes output 1
 ### Landing Page
 - **DemoDeck** — a static hardcoded sample pitch deck is visible on the landing page so the output quality is immediately apparent without waiting for a generation
 
-### Audio
+### Audio Narration
 - **Per-genre voice profiles** — each genre maps to a distinct ElevenLabs voice (e.g. Thriller → Harry, Fantasy → George, Romance → Sarah)
 - **Per-act dynamics** — stability and style parameters are tuned per act (setup vs. conflict vs. resolution)
 - **Client-side retry** — two sweeps across the 3 acts with 2-second gaps; eliminates silent acts caused by server-side timeout issues
@@ -242,18 +310,13 @@ IBM Bob was the **primary development tool** for this project — every signific
 | Judging Criterion | How StoryForge AI addresses it |
 |---|---|
 | **Technical Execution** | Sequential LLM prompt chain with structured JSON outputs; parallel audio+image lanes; per-section regeneration with rollback; server-side API routes with proper secret management; type-safe throughout with `tsc --noEmit` passing at 0 errors |
-| **Innovation** | Combines structured story generation + coherent world-building + AI concept art + per-act audio narration + one-click styled PDF into a single seamless flow — and adds per-section + per-image regeneration with rollback UX |
+| **Innovation** | Multi-agent AI architecture- Combines structured story generation + coherent world-building + AI concept art + per-act audio narration + one-click styled PDF into a single seamless flow — and adds per-section + per-image regeneration with rollback UX |
 | **Challenge Fit** | Directly embodies "AI as a creative partner for creative industries" — Granite maintains creative coherence across five interdependent outputs |
 | **Feasibility** | Single repo, three API keys, zero infrastructure — runs locally with `npm run dev` |
 | **Real-World Impact** | Writers, game designers, and indie creators spend hours creating pitches manually. This turns that into 60 seconds and produces a shareable, professional document |
 
 ---
 
-## IBM SkillsBuild
 
-IBM SkillsBuild learning certificate completed and uploaded as required by the challenge.
-
----
-
-*Built solo for the IBM AI Builders — July 2026 Challenge: Reimagine Creative Industries with AI.*
+*Built for the IBM AI Builders — July 2026 Challenge: Reimagine Creative Industries with AI.*
 *Primary dev tool: IBM Bob.*
